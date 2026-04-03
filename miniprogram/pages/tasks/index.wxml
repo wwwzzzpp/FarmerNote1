@@ -1,0 +1,224 @@
+<view class="app-shell">
+  <view class="section-card hero-card hero-strip">
+    <text class="hero-kicker">TASKS</text>
+    <text class="hero-title">待办提醒</text>
+    <text class="hero-body">这里会汇总所有挂了时间的巡田记录。可以完成、改时间，也可以跳回时间线看原记录。</text>
+  </view>
+
+  <view wx:if="{{!hasTasks}}" class="section-card empty-state">
+    <text class="empty-title">还没有定时任务</text>
+    <text class="empty-body">在“记录”页打开提醒时间，这里就会自动接住。</text>
+  </view>
+
+  <view wx:if="{{hasUpcomingTasks}}">
+    <text class="section-block-title">即将到来</text>
+    <text class="section-block-caption">未来的巡田动作</text>
+
+    <block wx:for="{{upcomingTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+            <text class="section-subtitle">记录于 {{item.entryCreatedLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <text class="task-meta">完整时间：{{item.dueFullLabel}}</text>
+
+        <view class="action-row action-row--stack">
+          <button
+            wx:if="{{item.canComplete}}"
+            class="action-button primary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="completeTask"
+          >
+            完成
+          </button>
+          <button
+            wx:if="{{item.canEdit}}"
+            class="action-button secondary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="startEdit"
+          >
+            改时间
+          </button>
+          <button
+            class="action-button ghost-button small-button"
+            data-entry-id="{{item.entryId}}"
+            bindtap="openEntry"
+          >
+            查看原记录
+          </button>
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="deleteTask"
+          >
+            删除任务
+          </button>
+        </view>
+
+        <view wx:if="{{item.isEditing}}" class="editor-panel">
+          <view class="picker-grid">
+            <view class="picker-field">
+              <text class="picker-label">新日期</text>
+              <picker mode="date" value="{{draftDate}}" bindchange="handleDraftDateChange">
+                <view class="picker-value">{{draftDate}}</view>
+              </picker>
+            </view>
+
+            <view class="picker-field">
+              <text class="picker-label">新时间</text>
+              <picker mode="time" value="{{draftTime}}" bindchange="handleDraftTimeChange">
+                <view class="picker-value">{{draftTime}}</view>
+              </picker>
+            </view>
+          </view>
+
+          <text class="helper-text">如果你把时间改到过去，这条任务会自动变成“已逾期”。</text>
+
+          <view class="action-row action-row--pair">
+            <button
+              class="action-button primary-button small-button"
+              data-task-id="{{item.id}}"
+              bindtap="saveReschedule"
+            >
+              保存新时间
+            </button>
+            <button class="action-button ghost-button small-button" bindtap="cancelEdit">取消</button>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{hasOverdueTasks}}">
+    <text class="section-block-title">已逾期</text>
+    <text class="section-block-caption">时间到了但还没处理</text>
+
+    <block wx:for="{{overdueTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+            <text class="section-subtitle">记录于 {{item.entryCreatedLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <text class="task-meta">完整时间：{{item.dueFullLabel}}</text>
+
+        <view class="action-row action-row--stack">
+          <button
+            wx:if="{{item.canComplete}}"
+            class="action-button primary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="completeTask"
+          >
+            完成
+          </button>
+          <button
+            wx:if="{{item.canEdit}}"
+            class="action-button secondary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="startEdit"
+          >
+            改时间
+          </button>
+          <button
+            class="action-button ghost-button small-button"
+            data-entry-id="{{item.entryId}}"
+            bindtap="openEntry"
+          >
+            查看原记录
+          </button>
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="deleteTask"
+          >
+            删除任务
+          </button>
+        </view>
+
+        <view wx:if="{{item.isEditing}}" class="editor-panel">
+          <view class="picker-grid">
+            <view class="picker-field">
+              <text class="picker-label">新日期</text>
+              <picker mode="date" value="{{draftDate}}" bindchange="handleDraftDateChange">
+                <view class="picker-value">{{draftDate}}</view>
+              </picker>
+            </view>
+
+            <view class="picker-field">
+              <text class="picker-label">新时间</text>
+              <picker mode="time" value="{{draftTime}}" bindchange="handleDraftTimeChange">
+                <view class="picker-value">{{draftTime}}</view>
+              </picker>
+            </view>
+          </view>
+
+          <text class="helper-text">改到未来时间后，这条任务会自动回到“即将到来”。</text>
+
+          <view class="action-row action-row--pair">
+            <button
+              class="action-button primary-button small-button"
+              data-task-id="{{item.id}}"
+              bindtap="saveReschedule"
+            >
+              保存新时间
+            </button>
+            <button class="action-button ghost-button small-button" bindtap="cancelEdit">取消</button>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{hasCompletedTasks}}">
+    <text class="section-block-title">已完成</text>
+    <text class="section-block-caption">已经处理完的提醒</text>
+
+    <block wx:for="{{completedTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+            <text class="section-subtitle">记录于 {{item.entryCreatedLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <text class="task-meta">原提醒时间：{{item.dueFullLabel}}</text>
+        <text class="task-meta" wx:if="{{item.completedLabel}}">{{item.completedLabel}}</text>
+
+        <view class="action-row action-row--pair">
+          <button
+            class="action-button ghost-button small-button"
+            data-entry-id="{{item.entryId}}"
+            bindtap="openEntry"
+          >
+            查看原记录
+          </button>
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="deleteTask"
+          >
+            删除任务
+          </button>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view class="nav-bar">
+    <button class="nav-item" bindtap="goRecord">记录</button>
+    <button class="nav-item" bindtap="goTimeline">时间线</button>
+    <button class="nav-item nav-item--active" bindtap="goTasks">待办</button>
+  </view>
+</view>

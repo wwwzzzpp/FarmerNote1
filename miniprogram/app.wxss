@@ -1,0 +1,407 @@
+page {
+  background: #f4f9f4;
+  color: #111827;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+view,
+text,
+textarea,
+button {
+  box-sizing: border-box;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  background: transparent;
+}
+
+button::after {
+  border: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 176rpx;
+  background: linear-gradient(180deg, #edf6ec 0%, #f8fbf2 48%, #f4f9f4 100%);
+}
+
+.section-card {
+  margin-top: 24rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
+  padding: 28rpx;
+  box-shadow: 0 18rpx 44rpx rgba(45, 90, 39, 0.08);
+}
+
+.section-card:first-child {
+  margin-top: 0;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, #1f431b 0%, #2d5a27 58%, #4c8d44 100%);
+  color: #ffffff;
+}
+
+.hero-kicker {
+  display: block;
+  font-size: 24rpx;
+  letter-spacing: 4rpx;
+  opacity: 0.8;
+}
+
+.hero-title {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 48rpx;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.hero-body {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.section-title {
+  display: block;
+  font-size: 32rpx;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #111827;
+}
+
+.section-subtitle {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.stats-row {
+  display: flex;
+  margin-top: 24rpx;
+}
+
+.stat-card {
+  flex: 1;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 22rpx 18rpx;
+  margin-right: 16rpx;
+}
+
+.stat-card:last-child {
+  margin-right: 0;
+}
+
+.stat-value {
+  display: block;
+  font-size: 40rpx;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.stat-label {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 260rpx;
+  margin-top: 24rpx;
+  border-radius: 24rpx;
+  border: 1px solid #d7e7d4;
+  background: #f9fcf8;
+  padding: 24rpx;
+  font-size: 30rpx;
+  line-height: 1.7;
+  color: #111827;
+}
+
+.helper-text {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #6b7280;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28rpx;
+}
+
+.toggle-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 20rpx;
+}
+
+.toggle-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #111827;
+}
+
+.toggle-caption {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.picker-grid {
+  margin-top: 24rpx;
+}
+
+.picker-field {
+  margin-top: 16rpx;
+}
+
+.picker-field:first-child {
+  margin-top: 0;
+}
+
+.picker-label {
+  display: block;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.picker-value {
+  margin-top: 10rpx;
+  border-radius: 22rpx;
+  border: 1px solid #d7e7d4;
+  background: #f9fcf8;
+  padding: 22rpx 24rpx;
+  font-size: 30rpx;
+  color: #111827;
+}
+
+.preview-label {
+  display: block;
+  font-size: 24rpx;
+  color: #4b5563;
+}
+
+.preview-time {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 42rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #111827;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-chip--success {
+  background: #e6f5e4;
+  color: #246c1d;
+}
+
+.status-chip--warning {
+  background: #fff4da;
+  color: #996a00;
+}
+
+.status-chip--danger {
+  background: #ffe8e8;
+  color: #b42318;
+}
+
+.status-chip--neutral {
+  background: #edf2ef;
+  color: #4b5563;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  border-radius: 24rpx;
+  padding: 0 28rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.small-button {
+  min-height: 68rpx;
+  border-radius: 18rpx;
+  padding: 0 22rpx;
+  font-size: 26rpx;
+}
+
+.primary-button {
+  background: #2d5a27;
+  color: #ffffff;
+}
+
+.secondary-button {
+  background: #f1f8ef;
+  color: #2d5a27;
+}
+
+.ghost-button {
+  background: #edf2ef;
+  color: #375f33;
+}
+
+.danger-button {
+  background: #fff1f1;
+  color: #c23939;
+}
+
+.action-row {
+  margin-top: 20rpx;
+}
+
+.action-row--single .action-button {
+  width: 100%;
+  margin-top: 0;
+}
+
+.action-row--pair {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -8rpx;
+  margin-right: -8rpx;
+}
+
+.action-row--pair .action-button {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  margin-top: 16rpx;
+  margin-left: 8rpx;
+  margin-right: 8rpx;
+}
+
+.action-row--pair .action-button:only-child {
+  flex-basis: 100%;
+}
+
+.action-row--stack .action-button {
+  width: 100%;
+  margin-top: 16rpx;
+}
+
+.action-row--stack .action-button:first-child {
+  margin-top: 0;
+}
+
+.muted-card {
+  background: #f5faf4;
+}
+
+.success-card {
+  background: #eff8ee;
+}
+
+.info-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf2 100%);
+}
+
+.empty-state {
+  padding: 44rpx 24rpx;
+  text-align: center;
+}
+
+.empty-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.empty-body {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #6b7280;
+}
+
+.section-block-title {
+  display: block;
+  margin-top: 30rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #2d5a27;
+}
+
+.section-block-caption {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.nav-bar {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 24rpx;
+  display: flex;
+  align-items: center;
+  padding: 12rpx;
+  border-radius: 999rpx;
+  background: rgba(20, 33, 20, 0.96);
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.18);
+  z-index: 20;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72rpx;
+  border-radius: 999rpx;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.nav-item--active {
+  background: #ffffff;
+  color: #1f431b;
+}

@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/record/index",
+    "pages/timeline/index",
+    "pages/tasks/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "巡田记",
+    "navigationBarBackgroundColor": "#2d5a27",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f4f9f4",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

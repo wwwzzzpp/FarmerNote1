@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+.npm-cache/
 
 # Expo
 .expo/
@@ -41,3 +42,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# WeChat DevTools private local settings
+miniprogram/project.private.config.json

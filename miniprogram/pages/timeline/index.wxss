@@ -1,0 +1,69 @@
+.hero-strip {
+  position: relative;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20rpx;
+  min-height: 50rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.timeline-card {
+  border: 1px solid transparent;
+}
+
+.timeline-card--focused {
+  border-color: #4caf50;
+  box-shadow: 0 20rpx 46rpx rgba(76, 175, 80, 0.14);
+}
+
+.timeline-time {
+  font-size: 30rpx;
+}
+
+.timeline-body {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 30rpx;
+  line-height: 1.8;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+.timeline-meta {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1px solid #e5ede3;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meta-label {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.meta-value {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.meta-full {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #6b7280;
+}

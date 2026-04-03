@@ -1,0 +1,34 @@
+.task-card {
+  border: 1px solid transparent;
+}
+
+.task-card--focused {
+  border-color: #4caf50;
+  box-shadow: 0 20rpx 46rpx rgba(76, 175, 80, 0.14);
+}
+
+.task-due {
+  font-size: 32rpx;
+}
+
+.task-note {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 30rpx;
+  line-height: 1.8;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+.task-meta {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.editor-panel {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1px solid #e5ede3;
+}
