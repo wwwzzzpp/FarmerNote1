@@ -48,10 +48,12 @@ function addTaskToPhoneCalendar({ noteText, dueAt, title }) {
 
     const startTime = Math.floor(new Date(dueAt).getTime() / 1000);
     const endTime = startTime + 30 * 60;
+    const normalizedNoteText = String(noteText || '').trim();
+    const normalizedTitle = String(title || '').trim() || normalizedNoteText || '农事提醒：巡田任务';
 
     wx.addPhoneCalendar({
-      title: title || '农事提醒：巡田任务',
-      description: String(noteText || '').trim(),
+      title: normalizedTitle,
+      description: normalizedNoteText,
       startTime,
       endTime,
       allDay: false,
