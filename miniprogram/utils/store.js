@@ -1,4 +1,5 @@
 const dateUtils = require('./date');
+const mediaUtils = require('./media');
 
 const STORAGE_KEY = 'farmernote_miniprogram_state_v1';
 
@@ -19,6 +20,7 @@ function sanitizeEntries(entries) {
     .map((entry) => ({
       id: String(entry.id),
       noteText: String(entry.noteText),
+      photoPath: typeof entry.photoPath === 'string' ? entry.photoPath : '',
       createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : new Date().toISOString(),
       updatedAt:
         typeof entry.updatedAt === 'string'
@@ -125,6 +127,7 @@ function buildTaskRecords(state) {
     return {
       ...task,
       noteText: entry ? entry.noteText : '这条原记录已删除',
+      photoPath: entry ? entry.photoPath : '',
       entryCreatedAt: entry ? entry.createdAt : task.dueAt,
     };
   });
@@ -167,23 +170,6 @@ function getTaskSections() {
   };
 }
 
-function getTaskById(taskId) {
-  const state = loadState();
-  const task = state.tasks.find((item) => item.id === taskId);
-
-  if (!task) {
-    return null;
-  }
-
-  const entry = state.entries.find((item) => item.id === task.entryId);
-
-  return {
-    ...task,
-    noteText: entry ? entry.noteText : '这条原记录已删除',
-    entryCreatedAt: entry ? entry.createdAt : task.dueAt,
-  };
-}
-
 function createEntry(input) {
   const state = loadState();
   const nowIso = new Date().toISOString();
@@ -196,6 +182,7 @@ function createEntry(input) {
   const entry = {
     id: dateUtils.createId('entry'),
     noteText,
+    photoPath: String(input.photoPath || ''),
     createdAt: nowIso,
     updatedAt: nowIso,
   };
@@ -226,6 +213,13 @@ function createEntry(input) {
 
 function deleteEntry(entryId) {
   const state = loadState();
+  const removedEntries = state.entries.filter((entry) => entry.id === entryId);
+
+  removedEntries.forEach((entry) => {
+    if (entry.photoPath) {
+      void mediaUtils.removeSavedPhoto(entry.photoPath);
+    }
+  });
 
   persistState({
     entries: state.entries.filter((entry) => entry.id !== entryId),
@@ -260,24 +254,6 @@ function deleteTask(taskId) {
   });
 }
 
-function rescheduleTask(taskId, nextDueAt) {
-  const state = loadState();
-
-  persistState({
-    entries: state.entries,
-    tasks: state.tasks.map((task) =>
-      task.id === taskId
-        ? {
-            ...task,
-            dueAt: nextDueAt,
-            status: dateUtils.isPastDate(nextDueAt) ? 'overdue' : 'pending',
-            completedAt: null,
-          }
-        : task
-    ),
-  });
-}
-
 module.exports = {
   STORAGE_KEY,
   completeTask,
@@ -285,9 +261,7 @@ module.exports = {
   deleteEntry,
   deleteTask,
   getStats,
-  getTaskById,
   getTaskSections,
   getTimelineEntries,
   loadState,
-  rescheduleTask,
 };

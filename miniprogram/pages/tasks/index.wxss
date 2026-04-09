@@ -3,8 +3,8 @@
 }
 
 .task-card--focused {
-  border-color: #4caf50;
-  box-shadow: 0 20rpx 46rpx rgba(76, 175, 80, 0.14);
+  border-color: #b7ad8c;
+  box-shadow: none;
 }
 
 .task-due {
@@ -13,22 +13,30 @@
 
 .task-note {
   display: block;
-  margin-top: 24rpx;
-  font-size: 30rpx;
-  line-height: 1.8;
+  margin-top: 18rpx;
+  font-size: 34rpx;
+  line-height: 1.7;
   color: #111827;
   white-space: pre-wrap;
 }
 
-.task-meta {
+.task-photo-thumb {
   display: block;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: #6b7280;
+  width: 220rpx;
+  height: 164rpx;
+  margin-top: 16rpx;
+  border-radius: 18rpx;
+  background: #ddd5c2;
 }
 
-.editor-panel {
-  margin-top: 24rpx;
-  padding-top: 20rpx;
-  border-top: 1px solid #e5ede3;
+.task-action-grid {
+  margin-top: 18rpx;
+}
+
+.task-action-grid .action-button {
+  flex: 1 1 0;
+  min-height: 60rpx;
+  padding: 0 14rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
 }

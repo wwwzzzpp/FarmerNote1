@@ -6,9 +6,9 @@
   ],
   "window": {
     "navigationBarTitleText": "巡田记",
-    "navigationBarBackgroundColor": "#2d5a27",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#f4f9f4",
+    "navigationBarBackgroundColor": "#d9d1b8",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#efe9dd",
     "backgroundTextStyle": "light"
   },
   "style": "v2",

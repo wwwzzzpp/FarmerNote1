@@ -1,5 +1,5 @@
 page {
-  background: #f4f9f4;
+  background: #efe9dd;
   color: #111827;
   font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
@@ -25,15 +25,16 @@ button::after {
 .app-shell {
   min-height: 100vh;
   padding: 24rpx 24rpx 176rpx;
-  background: linear-gradient(180deg, #edf6ec 0%, #f8fbf2 48%, #f4f9f4 100%);
+  background: #efe9dd;
 }
 
 .section-card {
   margin-top: 24rpx;
   border-radius: 28rpx;
-  background: #ffffff;
+  background: #f8f4ea;
   padding: 28rpx;
-  box-shadow: 0 18rpx 44rpx rgba(45, 90, 39, 0.08);
+  border: 1px solid #d8cfba;
+  box-shadow: 0 8rpx 18rpx rgba(96, 82, 58, 0.06);
 }
 
 .section-card:first-child {
@@ -41,15 +42,17 @@ button::after {
 }
 
 .hero-card {
-  background: linear-gradient(135deg, #1f431b 0%, #2d5a27 58%, #4c8d44 100%);
-  color: #ffffff;
+  background: #d9d1b8;
+  border: 1px solid #c7bea4;
+  color: #3d3a2f;
 }
 
 .hero-kicker {
   display: block;
   font-size: 24rpx;
   letter-spacing: 4rpx;
-  opacity: 0.8;
+  color: #6d674f;
+  opacity: 1;
 }
 
 .hero-title {
@@ -65,7 +68,7 @@ button::after {
   margin-top: 16rpx;
   font-size: 28rpx;
   line-height: 1.75;
-  color: rgba(255, 255, 255, 0.85);
+  color: #5c5847;
 }
 
 .section-title {
@@ -81,7 +84,7 @@ button::after {
   margin-top: 8rpx;
   font-size: 24rpx;
   line-height: 1.6;
-  color: #6b7280;
+  color: #746d5d;
 }
 
 .section-heading {
@@ -104,7 +107,8 @@ button::after {
 .stat-card {
   flex: 1;
   border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.14);
+  background: #e7e0ca;
+  border: 1px solid #d0c6ab;
   padding: 22rpx 18rpx;
   margin-right: 16rpx;
 }
@@ -118,14 +122,14 @@ button::after {
   font-size: 40rpx;
   line-height: 1.2;
   font-weight: 700;
-  color: #ffffff;
+  color: #504b38;
 }
 
 .stat-label {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.78);
+  color: #6b654f;
 }
 
 .textarea {
@@ -133,8 +137,8 @@ button::after {
   min-height: 260rpx;
   margin-top: 24rpx;
   border-radius: 24rpx;
-  border: 1px solid #d7e7d4;
-  background: #f9fcf8;
+  border: 1px solid #d6ccb5;
+  background: #f3efe4;
   padding: 24rpx;
   font-size: 30rpx;
   line-height: 1.7;
@@ -146,7 +150,7 @@ button::after {
   margin-top: 18rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #6b7280;
+  color: #736d5e;
 }
 
 .toggle-row {
@@ -173,7 +177,7 @@ button::after {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: #736d5e;
 }
 
 .picker-grid {
@@ -191,14 +195,14 @@ button::after {
 .picker-label {
   display: block;
   font-size: 24rpx;
-  color: #6b7280;
+  color: #736d5e;
 }
 
 .picker-value {
   margin-top: 10rpx;
   border-radius: 22rpx;
-  border: 1px solid #d7e7d4;
-  background: #f9fcf8;
+  border: 1px solid #d6ccb5;
+  background: #f0ebdf;
   padding: 22rpx 24rpx;
   font-size: 30rpx;
   color: #111827;
@@ -207,7 +211,38 @@ button::after {
 .preview-label {
   display: block;
   font-size: 24rpx;
-  color: #4b5563;
+  color: #655f50;
+}
+
+.smart-detect-card {
+  margin-top: 24rpx;
+  border-radius: 22rpx;
+  background: #ece6d6;
+  padding: 22rpx 24rpx;
+  border: 1px solid #d4c9af;
+}
+
+.smart-detect-title {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.45;
+  font-weight: 700;
+  color: #4f4937;
+}
+
+.smart-detect-body {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #655f50;
+}
+
+.smart-detect-hit {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #756f61;
 }
 
 .preview-time {
@@ -232,13 +267,13 @@ button::after {
 }
 
 .status-chip--success {
-  background: #e6f5e4;
-  color: #246c1d;
+  background: #e2e5d3;
+  color: #5a6440;
 }
 
 .status-chip--warning {
-  background: #fff4da;
-  color: #996a00;
+  background: #f3e3b3;
+  color: #8a6513;
 }
 
 .status-chip--danger {
@@ -247,8 +282,8 @@ button::after {
 }
 
 .status-chip--neutral {
-  background: #edf2ef;
-  color: #4b5563;
+  background: #ebe7da;
+  color: #6a6554;
 }
 
 .action-button {
@@ -271,22 +306,27 @@ button::after {
 }
 
 .primary-button {
-  background: #2d5a27;
+  background: #6f7751;
+  border: 1px solid #636a48;
+  box-shadow: none;
   color: #ffffff;
 }
 
 .secondary-button {
-  background: #f1f8ef;
-  color: #2d5a27;
+  background: #e5dfcd;
+  border: 1px solid #cfc5aa;
+  color: #4f573b;
 }
 
 .ghost-button {
-  background: #edf2ef;
-  color: #375f33;
+  background: #f1ece1;
+  border: 1px solid #ddd4c2;
+  color: #6b6656;
 }
 
 .danger-button {
-  background: #fff1f1;
+  background: #f8ebeb;
+  border: 1px solid #ebd2d2;
   color: #c23939;
 }
 
@@ -329,15 +369,15 @@ button::after {
 }
 
 .muted-card {
-  background: #f5faf4;
+  background: #f2ede1;
 }
 
 .success-card {
-  background: #eff8ee;
+  background: #ece6d6;
 }
 
 .info-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f7fbf2 100%);
+  background: #f4f0e7;
 }
 
 .empty-state {
@@ -357,7 +397,7 @@ button::after {
   margin-top: 14rpx;
   font-size: 26rpx;
   line-height: 1.7;
-  color: #6b7280;
+  color: #736d5e;
 }
 
 .section-block-title {
@@ -365,14 +405,14 @@ button::after {
   margin-top: 30rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #2d5a27;
+  color: #59533f;
 }
 
 .section-block-caption {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: #736d5e;
 }
 
 .nav-bar {
@@ -384,8 +424,9 @@ button::after {
   align-items: center;
   padding: 12rpx;
   border-radius: 999rpx;
-  background: rgba(20, 33, 20, 0.96);
-  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.18);
+  background: #d4ccb5;
+  border: 1px solid #c2b89b;
+  box-shadow: none;
   z-index: 20;
 }
 
@@ -396,12 +437,13 @@ button::after {
   justify-content: center;
   min-height: 72rpx;
   border-radius: 999rpx;
-  color: rgba(255, 255, 255, 0.66);
+  color: #625d4b;
   font-size: 26rpx;
   font-weight: 700;
 }
 
 .nav-item--active {
-  background: #ffffff;
-  color: #1f431b;
+  background: #faf6ed;
+  box-shadow: none;
+  color: #383425;
 }

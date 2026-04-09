@@ -2,7 +2,7 @@
   <view class="section-card hero-card">
     <text class="hero-kicker">FARMER NOTE</text>
     <text class="hero-title">今天田里看到啥，先记下来。</text>
-    <text class="hero-body">记录会自动串成时间线。带提醒的记录会同步变成一条待办，方便后面继续跟。</text>
+    <!-- <text class="hero-body">记录会自动串成时间线。带提醒的记录会同步变成一条待办，方便后面继续跟。</text> -->
 
     <view class="stats-row">
       <view class="stat-card">
@@ -23,29 +23,55 @@
   <view class="section-card">
     <view class="section-heading">
       <view class="section-heading-main">
-        <text class="section-title">本次记录</text>
-        <text class="section-subtitle">不登录，不上云，直接保存在当前微信里。</text>
+        <text class="toggle-caption">提示词中可以包含：提醒我、提醒一下、提醒下、记得、别忘、定时、到时、到时候、闹钟。</text>
       </view>
-      <text class="status-chip status-chip--success">本机保存</text>
     </view>
+    <view class="note-composer">
+      <textarea
+        class="textarea textarea--compact"
+        placeholder="提醒我东南角麦苗偏黄，沟边有积水。&#10;下午三点再去补看。"
+        value="{{noteText}}"
+        bindinput="handleNoteInput"
+        bindlinechange="handleNoteLineChange"
+        maxlength="-1"
+      />
 
-    <textarea
-      class="textarea"
-      placeholder="例如：东南角麦苗偏黄，沟边有积水，下午三点再去补看。"
-      value="{{noteText}}"
-      bindinput="handleNoteInput"
-      auto-height
-      maxlength="-1"
-    />
+      <view wx:if="{{photoTempPath}}" class="composer-photo-wrap">
+        <image class="composer-photo-thumb" src="{{photoTempPath}}" mode="aspectFill" bindtap="previewPhoto" />
+        <text class="photo-hint">已附带现场照片，点图可放大查看。</text>
+      </view>
 
-    <text class="helper-text">支持只记文字。后面如果要继续接地块标签、病虫害分类或图片记录，这个结构也能接着扩。</text>
+      <view class="composer-footer">
+        <view class="composer-tools">
+          <button class="action-button camera-button" bindtap="handleTakePhoto">
+            {{photoTempPath ? '重拍照片' : '拍照记录'}}
+          </button>
+          <button wx:if="{{photoTempPath}}" class="action-button remove-photo-button" bindtap="clearPhoto">
+            删除照片
+          </button>
+        </view>
+        <button class="action-button primary-button composer-save-button" bindtap="handleSave" loading="{{isSaving}}">
+          保存这条记录
+        </button>
+      </view>
+    </view>
 
     <view class="toggle-row">
       <view class="toggle-main">
         <text class="toggle-label">需要定时处理吗？</text>
-        <text class="toggle-caption">打开后会给这条记录挂一个时间，自动进入待办。</text>
       </view>
-      <switch checked="{{reminderEnabled}}" color="#4caf50" bindchange="handleReminderToggle" />
+      <switch checked="{{reminderEnabled}}" color="#6f7751" bindchange="handleReminderToggle" />
+    </view>
+
+    <view wx:if="{{smartReminderVisible}}" class="smart-detect-card">
+      <view class="section-heading">
+        <view class="section-heading-main">
+          <text class="smart-detect-title">系统识别到定时处理</text>
+          <text class="smart-detect-body">{{smartReminderMessage}}</text>
+        </view>
+        <text class="status-chip {{smartReminderToneClass}}">{{smartReminderTag}}</text>
+      </view>
+      <text wx:if="{{smartReminderMatchedText}}" class="smart-detect-hit">命中内容：{{smartReminderMatchedText}}</text>
     </view>
 
     <view wx:if="{{reminderEnabled}}" class="picker-grid">
@@ -65,10 +91,6 @@
 
       <text class="helper-text">保存后会自动尝试把这条任务写入手机系统日历。如果当前微信环境或权限不支持，记录本身仍会正常保存。</text>
     </view>
-
-    <view class="action-row action-row--single">
-      <button class="action-button primary-button" bindtap="handleSave">保存这条记录</button>
-    </view>
   </view>
 
   <view wx:if="{{previewTimeText}}" class="section-card muted-card">
@@ -82,7 +104,7 @@
     <text class="helper-text">{{feedbackMessage}}</text>
   </view>
 
-  <view class="section-card info-card">
+  <!-- <view class="section-card info-card">
     <text class="section-title">下一步</text>
     <text class="helper-text">时间线会展示所有历史记录，待办页则会把挂了时间的记录自动分成即将到来、已逾期和已完成。</text>
 
@@ -90,7 +112,7 @@
       <button class="action-button secondary-button small-button" bindtap="goTimeline">查看时间线</button>
       <button class="action-button ghost-button small-button" bindtap="goTasks">打开待办</button>
     </view>
-  </view>
+  </view> -->
 
   <view class="nav-bar">
     <button class="nav-item nav-item--active" bindtap="goRecord">记录</button>

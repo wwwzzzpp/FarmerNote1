@@ -1,5 +1,7 @@
 const calendarUtils = require('../../utils/calendar');
 const dateUtils = require('../../utils/date');
+const mediaUtils = require('../../utils/media');
+const reminderIntent = require('../../utils/reminder-intent');
 const store = require('../../utils/store');
 
 function buildReminderPreview(dateValue, timeValue) {
@@ -21,9 +23,18 @@ Page({
     reminderEnabled: false,
     reminderDate: '',
     reminderTime: '',
+    smartReminderVisible: false,
+    smartReminderTag: '',
+    smartReminderToneClass: 'status-chip--neutral',
+    smartReminderMessage: '',
+    smartReminderMatchedText: '',
+    manualReminderEdited: false,
+    autoReminderApplied: false,
     previewTimeText: '',
     previewHint: '',
     feedbackMessage: '',
+    photoTempPath: '',
+    isSaving: false,
     stats: {
       entryCount: 0,
       pendingTaskCount: 0,
@@ -33,8 +44,18 @@ Page({
   },
 
   onLoad() {
+    this.noteAnalysisTimer = null;
+    this.lastAcceptedNoteText = '';
+    this.lastLineLimitToastAt = 0;
     this.ensureReminderDraft();
     this.refreshPage();
+  },
+
+  onUnload() {
+    if (this.noteAnalysisTimer) {
+      clearTimeout(this.noteAnalysisTimer);
+      this.noteAnalysisTimer = null;
+    }
   },
 
   onShow() {
@@ -88,18 +109,233 @@ Page({
     }
   },
 
-  handleNoteInput(event) {
-    this.setData({
-      noteText: event.detail.value,
+  scheduleReminderAnalysis(noteText) {
+    if (this.noteAnalysisTimer) {
+      clearTimeout(this.noteAnalysisTimer);
+    }
+
+    this.noteAnalysisTimer = setTimeout(() => {
+      this.noteAnalysisTimer = null;
+      this.runReminderAnalysis(noteText);
+    }, 700);
+  },
+
+  clearSmartReminder(options) {
+    const settings = options || {};
+    const nextDraft = dateUtils.getSuggestedReminderParts();
+    const nextState = {
+      smartReminderVisible: false,
+      smartReminderTag: '',
+      smartReminderToneClass: 'status-chip--neutral',
+      smartReminderMessage: '',
+      smartReminderMatchedText: '',
+    };
+
+    if (settings.resetManualEdited) {
+      nextState.manualReminderEdited = false;
+    }
+
+    if (settings.resetAutoReminder) {
+      nextState.autoReminderApplied = false;
+    }
+
+    if (settings.resetReminderFields) {
+      nextState.reminderEnabled = false;
+      nextState.reminderDate = nextDraft.date;
+      nextState.reminderTime = nextDraft.time;
+      nextState.previewTimeText = '';
+      nextState.previewHint = '';
+    }
+
+    this.setData(nextState, () => {
+      if (settings.resetReminderFields) {
+        this.updatePreview();
+      }
     });
+  },
+
+  buildManualOverrideState(message) {
+    if (!this.data.smartReminderMatchedText) {
+      return {
+        manualReminderEdited: true,
+        autoReminderApplied: false,
+      };
+    }
+
+    return {
+      manualReminderEdited: true,
+      autoReminderApplied: false,
+      smartReminderVisible: true,
+      smartReminderTag: '手动优先',
+      smartReminderToneClass: 'status-chip--warning',
+      smartReminderMessage: message,
+    };
+  },
+
+  runReminderAnalysis(noteText) {
+    const text = String(noteText || '').trim();
+
+    if (!text) {
+      this.clearSmartReminder({
+        resetManualEdited: true,
+        resetAutoReminder: true,
+        resetReminderFields: true,
+      });
+      return;
+    }
+
+    const result = reminderIntent.parseReminderIntent(text, {
+      reference: new Date(),
+    });
+
+    if (!result.needsReminder) {
+      this.clearSmartReminder({
+        resetAutoReminder: true,
+        resetReminderFields: this.data.autoReminderApplied && !this.data.manualReminderEdited,
+      });
+      return;
+    }
+
+    const parts = dateUtils.splitDateTime(result.dueAt);
+
+    if (this.data.manualReminderEdited) {
+      this.setData({
+        smartReminderVisible: true,
+        smartReminderTag: '手动优先',
+        smartReminderToneClass: 'status-chip--warning',
+        smartReminderMessage: `识别到“${result.matchedText || '待处理时间'}”，但你已经手动改过提醒时间，系统不再自动覆盖。`,
+        smartReminderMatchedText: result.matchedText,
+        autoReminderApplied: false,
+      });
+      return;
+    }
+
+    this.setData(
+      {
+        reminderEnabled: true,
+        reminderDate: parts.date,
+        reminderTime: parts.time,
+        smartReminderVisible: true,
+        smartReminderTag: result.confidence === 'high' ? '自动填充' : '智能建议',
+        smartReminderToneClass:
+          result.confidence === 'high' ? 'status-chip--success' : 'status-chip--warning',
+        smartReminderMessage: result.message,
+        smartReminderMatchedText: result.matchedText,
+        autoReminderApplied: true,
+      },
+      () => {
+        this.updatePreview();
+      }
+    );
+  },
+
+  handleNoteInput(event) {
+    const noteText = String(event.detail.value || '')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .slice(0, 2)
+      .join('\n');
+
+    this.setData({
+      noteText,
+    });
+
+    if (!String(noteText || '').trim()) {
+      if (this.noteAnalysisTimer) {
+        clearTimeout(this.noteAnalysisTimer);
+        this.noteAnalysisTimer = null;
+      }
+
+      this.clearSmartReminder({
+        resetManualEdited: true,
+        resetAutoReminder: true,
+        resetReminderFields: true,
+      });
+      return;
+    }
+
+    this.scheduleReminderAnalysis(noteText);
+  },
+
+  handleNoteLineChange(event) {
+    const lineCount = Number((event.detail && event.detail.lineCount) || 0);
+
+    if (lineCount <= 2) {
+      this.lastAcceptedNoteText = this.data.noteText;
+      return;
+    }
+
+    const fallbackNoteText = this.lastAcceptedNoteText || '';
+
+    if (this.noteAnalysisTimer) {
+      clearTimeout(this.noteAnalysisTimer);
+      this.noteAnalysisTimer = null;
+    }
+
+    this.setData({
+      noteText: fallbackNoteText,
+    });
+
+    if (fallbackNoteText) {
+      this.scheduleReminderAnalysis(fallbackNoteText);
+    } else {
+      this.clearSmartReminder({
+        resetManualEdited: true,
+        resetAutoReminder: true,
+        resetReminderFields: true,
+      });
+    }
+
+    const now = Date.now();
+    if (now - this.lastLineLimitToastAt > 1200) {
+      this.lastLineLimitToastAt = now;
+      wx.showToast({
+        title: '最多输入两行',
+        icon: 'none',
+      });
+    }
+  },
+
+  async handleTakePhoto() {
+    try {
+      const photoTempPath = await mediaUtils.chooseCameraPhoto();
+
+      this.setData({
+        photoTempPath,
+      });
+    } catch (error) {
+      if (error && error.code === 'cancel') {
+        return;
+      }
+
+      wx.showToast({
+        title: '拍照失败',
+        icon: 'none',
+      });
+    }
+  },
+
+  clearPhoto() {
+    this.setData({
+      photoTempPath: '',
+    });
+  },
+
+  previewPhoto() {
+    mediaUtils.previewPhoto(this.data.photoTempPath);
   },
 
   handleReminderToggle(event) {
     this.ensureReminderDraft();
     this.setData(
-      {
-        reminderEnabled: !!event.detail.value,
-      },
+      Object.assign(
+        {
+          reminderEnabled: !!event.detail.value,
+        },
+        this.buildManualOverrideState(
+          `识别到“${this.data.smartReminderMatchedText}”，但你选择了手动控制提醒。`
+        )
+      ),
       () => {
         this.updatePreview();
       }
@@ -108,9 +344,14 @@ Page({
 
   handleDateChange(event) {
     this.setData(
-      {
-        reminderDate: event.detail.value,
-      },
+      Object.assign(
+        {
+          reminderDate: event.detail.value,
+        },
+        this.buildManualOverrideState(
+          `识别到“${this.data.smartReminderMatchedText}”，但当前时间已按你的手动修改为准。`
+        )
+      ),
       () => {
         this.updatePreview();
       }
@@ -119,16 +360,25 @@ Page({
 
   handleTimeChange(event) {
     this.setData(
-      {
-        reminderTime: event.detail.value,
-      },
+      Object.assign(
+        {
+          reminderTime: event.detail.value,
+        },
+        this.buildManualOverrideState(
+          `识别到“${this.data.smartReminderMatchedText}”，但当前时间已按你的手动修改为准。`
+        )
+      ),
       () => {
         this.updatePreview();
       }
     );
   },
 
-  handleSave() {
+  async handleSave() {
+    if (this.data.isSaving) {
+      return;
+    }
+
     const noteText = String(this.data.noteText || '').trim();
 
     if (!noteText) {
@@ -140,6 +390,7 @@ Page({
     }
 
     let dueAt = null;
+    let savedPhotoPath = '';
 
     if (this.data.reminderEnabled) {
       try {
@@ -153,45 +404,87 @@ Page({
       }
     }
 
-    const result = store.createEntry({
-      noteText,
-      dueAt,
-    });
-
-    const suggestion = dateUtils.getSuggestedReminderParts();
-    let feedbackMessage = '记录已保存到本机时间线。';
-
-    if (result.task && result.task.status === 'overdue') {
-      feedbackMessage = '记录已保存，提醒时间已经过去，已自动放进逾期待办。';
-    } else if (result.task) {
-      feedbackMessage = '记录和待办都已保存，正在尝试写入手机日历提醒。';
-    }
-
     this.setData({
-      noteText: '',
-      reminderEnabled: false,
-      reminderDate: suggestion.date,
-      reminderTime: suggestion.time,
-      previewTimeText: '',
-      previewHint: '',
-      feedbackMessage,
-      stats: store.getStats(),
+      isSaving: true,
     });
 
-    wx.showToast({
-      title: '已保存',
-      icon: 'success',
-    });
+    try {
+      if (this.data.photoTempPath) {
+        savedPhotoPath = await mediaUtils.persistPhoto(this.data.photoTempPath);
+      }
 
-    if (result.task && result.task.status === 'pending') {
-      void this.trySyncPhoneCalendar({
+      const result = store.createEntry({
         noteText,
         dueAt,
+        photoPath: savedPhotoPath,
+      });
+
+      const suggestion = dateUtils.getSuggestedReminderParts();
+      let feedbackMessage = savedPhotoPath
+        ? '文字和现场照片都已保存到本机时间线。'
+        : '记录已保存到本机时间线。';
+
+      if (result.task && result.task.status === 'overdue') {
+        feedbackMessage = savedPhotoPath
+          ? '记录、照片都已保存，提醒时间已经过去，已自动放进逾期待办。'
+          : '记录已保存，提醒时间已经过去，已自动放进逾期待办。';
+      } else if (result.task) {
+        feedbackMessage = savedPhotoPath
+          ? '记录、照片和待办都已保存，正在尝试写入手机日历提醒。'
+          : '记录和待办都已保存，正在尝试写入手机日历提醒。';
+      }
+
+      this.lastAcceptedNoteText = '';
+      this.setData({
+        noteText: '',
+        reminderEnabled: false,
+        reminderDate: suggestion.date,
+        reminderTime: suggestion.time,
+        smartReminderVisible: false,
+        smartReminderTag: '',
+        smartReminderToneClass: 'status-chip--neutral',
+        smartReminderMessage: '',
+        smartReminderMatchedText: '',
+        manualReminderEdited: false,
+        autoReminderApplied: false,
+        previewTimeText: '',
+        previewHint: '',
+        feedbackMessage,
+        photoTempPath: '',
+        stats: store.getStats(),
+      });
+
+      wx.showToast({
+        title: '已保存',
+        icon: 'success',
+      });
+
+      if (result.task && result.task.status === 'pending') {
+        void this.trySyncPhoneCalendar({
+          noteText,
+          dueAt,
+          hasPhoto: !!savedPhotoPath,
+        });
+      }
+    } catch (error) {
+      if (savedPhotoPath) {
+        void mediaUtils.removeSavedPhoto(savedPhotoPath);
+      }
+
+      wx.showToast({
+        title: error && error.code === 'save_failed' ? '照片保存失败' : '保存失败，请重试',
+        icon: 'none',
+      });
+    } finally {
+      this.setData({
+        isSaving: false,
       });
     }
   },
 
-  async trySyncPhoneCalendar({ noteText, dueAt }) {
+  async trySyncPhoneCalendar({ noteText, dueAt, hasPhoto }) {
+    const baseLabel = hasPhoto ? '记录、照片和待办都已保存' : '记录和待办都已保存';
+
     try {
       await calendarUtils.addTaskToPhoneCalendar({
         noteText,
@@ -199,7 +492,7 @@ Page({
       });
 
       this.setData({
-        feedbackMessage: '记录、待办和手机日历提醒都已保存。',
+        feedbackMessage: `${baseLabel}，手机日历提醒也已写入。`,
       });
 
       wx.showToast({
@@ -209,21 +502,21 @@ Page({
     } catch (error) {
       if (error && error.code === 'unsupported') {
         this.setData({
-          feedbackMessage: '记录和待办都已保存，但当前微信环境不支持写入手机系统日历。',
+          feedbackMessage: `${baseLabel}，但当前微信环境不支持写入手机系统日历。`,
         });
         return;
       }
 
       if (error && error.code === 'cancel') {
         this.setData({
-          feedbackMessage: '记录和待办都已保存，但你刚刚取消了写入手机日历。',
+          feedbackMessage: `${baseLabel}，但你刚刚取消了写入手机日历。`,
         });
         return;
       }
 
       if (error && error.code === 'permission_denied') {
         this.setData({
-          feedbackMessage: '记录和待办都已保存，但微信还没有拿到系统日历权限。',
+          feedbackMessage: `${baseLabel}，但微信还没有拿到系统日历权限。`,
         });
 
         wx.showModal({
@@ -236,7 +529,7 @@ Page({
       }
 
       this.setData({
-        feedbackMessage: '记录和待办都已保存，但写入手机日历失败了。',
+        feedbackMessage: `${baseLabel}，但写入手机日历失败了。`,
       });
     }
   },

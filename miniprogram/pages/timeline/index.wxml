@@ -2,7 +2,6 @@
   <view class="section-card hero-card hero-strip">
     <text class="hero-kicker">TIMELINE</text>
     <text class="hero-title">巡田时间线</text>
-    <text class="hero-body">所有记录都按时间倒序排好，带提醒的记录会直接显示当前处理状态。</text>
     <text class="hero-badge">共 {{entryCount}} 条</text>
   </view>
 
@@ -11,43 +10,64 @@
     <text class="empty-body">先去“记录”页写下第一条巡田观察，这里就会自动出现。</text>
   </view>
 
-  <block wx:for="{{entries}}" wx:key="id">
-    <view class="section-card timeline-card {{item.focusClass}}">
-      <view class="section-heading">
-        <view class="section-heading-main">
-          <text class="section-title timeline-time">{{item.createdLabel}}</text>
-          <text class="section-subtitle">更新时间：{{item.updatedLabel}}</text>
+  <block wx:for="{{dayGroups}}" wx:key="dayKey" wx:for-item="group">
+    <view class="timeline-day-group">
+      <view class="timeline-day-header">
+        <view class="timeline-day-label">
+          <text class="timeline-day-title">{{group.dayLabel}}</text>
+          <text class="timeline-day-caption">{{group.dayCaption}}</text>
         </view>
-        <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        <text class="timeline-day-count">{{group.countLabel}}</text>
       </view>
 
-      <text class="timeline-body">{{item.noteText}}</text>
+      <view class="timeline-thread">
+        <block wx:for="{{group.entries}}" wx:key="id" wx:for-item="entry">
+          <view class="timeline-thread-item">
+            <view class="timeline-rail">
+              <view class="thread-dot {{entry.dotClass}}"></view>
+              <view wx:if="{{!entry.isLastInGroup}}" class="thread-line"></view>
+            </view>
 
-      <view wx:if="{{item.hasTask}}" class="timeline-meta">
-        <view class="meta-row">
-          <text class="meta-label">提醒时间</text>
-          <text class="meta-value">{{item.taskDueLabel}}</text>
-        </view>
-        <text class="meta-full">完整时间：{{item.taskDueFullLabel}}</text>
-      </view>
+            <view class="section-card timeline-card {{entry.focusClass}}">
+              <view class="section-heading">
+                <view class="section-heading-main">
+                  <text class="section-title timeline-time">{{entry.createdClockLabel}}</text>
+                </view>
+                <text class="status-chip {{entry.statusClass}}">{{entry.statusLabel}}</text>
+              </view>
 
-      <view class="action-row action-row--pair">
-        <button
-          wx:if="{{item.hasTask}}"
-          class="action-button secondary-button small-button"
-          data-task-id="{{item.taskId}}"
-          bindtap="openTask"
-        >
-          打开待办
-        </button>
-        <button
-          class="action-button danger-button small-button"
-          data-entry-id="{{item.id}}"
-          data-has-task="{{item.hasTask}}"
-          bindtap="deleteEntry"
-        >
-          删除记录
-        </button>
+              <text class="timeline-body">{{entry.noteText}}</text>
+
+              <image
+                wx:if="{{entry.hasPhoto}}"
+                class="timeline-photo-thumb"
+                src="{{entry.photoPath}}"
+                mode="aspectFill"
+                data-photo-path="{{entry.photoPath}}"
+                bindtap="previewPhoto"
+              />
+
+              <view class="action-row action-row--pair">
+                <button
+                  wx:if="{{entry.hasTask}}"
+                  class="action-button secondary-button small-button"
+                  data-task-id="{{entry.taskId}}"
+                  bindtap="openTask"
+                >
+                  打开待办
+                </button>
+                <button
+                  class="action-button danger-button small-button"
+                  data-entry-id="{{entry.id}}"
+                  data-has-task="{{entry.hasTask}}"
+                  bindtap="deleteEntry"
+                >
+                  删除记录
+                </button>
+              </view>
+            </view>
+          </view>
+        </block>
       </view>
     </view>
   </block>
