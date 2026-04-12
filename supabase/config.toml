@@ -1,0 +1,46 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "25MiB"
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+
+[functions.auth-wechat-login]
+verify_jwt = false
+
+[functions.auth-refresh]
+verify_jwt = false
+
+[functions.sync-push]
+verify_jwt = false
+
+[functions.sync-pull]
+verify_jwt = false
+
+[functions.media-upload-ticket]
+verify_jwt = false
+
+[functions.media-download-ticket]
+verify_jwt = false

@@ -135,15 +135,23 @@ Page({
   },
 
   onShow() {
-    this.refreshPage();
+    void this.refreshPage();
   },
 
-  onPullDownRefresh() {
-    this.refreshPage();
+  async onPullDownRefresh() {
+    await this.refreshPage();
     wx.stopPullDownRefresh();
   },
 
-  refreshPage() {
+  async refreshPage() {
+    if (store.isSignedInToCloud()) {
+      try {
+        await store.syncNow();
+      } catch (_) {
+        // Keep local timeline visible when cloud sync fails.
+      }
+    }
+
     const entries = store
       .getTimelineEntries()
       .map((entry) => buildEntryViewModel(entry, this.data.focusEntryId));
@@ -179,7 +187,7 @@ Page({
         }
 
         store.deleteEntry(entryId);
-        this.refreshPage();
+        void this.refreshPage();
         wx.showToast({
           title: '已删除',
           icon: 'success',

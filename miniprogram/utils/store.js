@@ -1,12 +1,27 @@
+const cloudAuth = require('./cloud-auth');
+const cloudConfig = require('./cloud-config');
+const cloudMedia = require('./cloud-media');
+const cloudSync = require('./cloud-sync');
 const dateUtils = require('./date');
-const mediaUtils = require('./media');
-
 const STORAGE_KEY = 'farmernote_miniprogram_state_v1';
+
+let syncInFlight = null;
+let signInInFlight = null;
+let lastSyncError = '';
+let lastSyncAt = '';
+
+function pad(value) {
+  return value < 10 ? `0${value}` : `${value}`;
+}
 
 function getDefaultState() {
   return {
     entries: [],
     tasks: [],
+    pendingMutations: [],
+    lastSyncedVersion: 0,
+    authSession: null,
+    mediaCacheIndex: {},
   };
 }
 
@@ -20,14 +35,33 @@ function sanitizeEntries(entries) {
     .map((entry) => ({
       id: String(entry.id),
       noteText: String(entry.noteText),
-      photoPath: typeof entry.photoPath === 'string' ? entry.photoPath : '',
+      photoObjectPath: typeof entry.photoObjectPath === 'string' ? entry.photoObjectPath : '',
+      localPhotoPath:
+        typeof entry.localPhotoPath === 'string'
+          ? entry.localPhotoPath
+          : typeof entry.photoPath === 'string'
+          ? entry.photoPath
+          : '',
       createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : new Date().toISOString(),
       updatedAt:
         typeof entry.updatedAt === 'string'
           ? entry.updatedAt
           : typeof entry.createdAt === 'string'
-            ? entry.createdAt
-            : new Date().toISOString(),
+          ? entry.createdAt
+          : new Date().toISOString(),
+      clientUpdatedAt:
+        typeof entry.clientUpdatedAt === 'string'
+          ? entry.clientUpdatedAt
+          : typeof entry.updatedAt === 'string'
+          ? entry.updatedAt
+          : typeof entry.createdAt === 'string'
+          ? entry.createdAt
+          : new Date().toISOString(),
+      deletedAt: typeof entry.deletedAt === 'string' ? entry.deletedAt : null,
+      sourcePlatform:
+        typeof entry.sourcePlatform === 'string' ? entry.sourcePlatform : 'mini_program',
+      syncVersion: Number(entry.syncVersion || 0),
+      cloudTracked: entry.cloudTracked === true,
     }));
 }
 
@@ -47,7 +81,71 @@ function sanitizeTasks(tasks) {
           ? task.status
           : 'pending',
       completedAt: typeof task.completedAt === 'string' ? task.completedAt : null,
+      createdAt: typeof task.createdAt === 'string' ? task.createdAt : new Date().toISOString(),
+      updatedAt:
+        typeof task.updatedAt === 'string'
+          ? task.updatedAt
+          : typeof task.createdAt === 'string'
+          ? task.createdAt
+          : new Date().toISOString(),
+      clientUpdatedAt:
+        typeof task.clientUpdatedAt === 'string'
+          ? task.clientUpdatedAt
+          : typeof task.updatedAt === 'string'
+          ? task.updatedAt
+          : typeof task.createdAt === 'string'
+          ? task.createdAt
+          : new Date().toISOString(),
+      deletedAt: typeof task.deletedAt === 'string' ? task.deletedAt : null,
+      syncVersion: Number(task.syncVersion || 0),
+      cloudTracked: task.cloudTracked === true,
     }));
+}
+
+function sanitizeMutations(mutations) {
+  if (!Array.isArray(mutations)) {
+    return [];
+  }
+
+  return mutations
+    .filter(
+      (mutation) =>
+        mutation &&
+        typeof mutation === 'object' &&
+        mutation.id &&
+        mutation.entityId &&
+        mutation.entityType
+    )
+    .map((mutation) => ({
+      id: String(mutation.id),
+      entityType: mutation.entityType === 'task' ? 'task' : 'entry',
+      operation: mutation.operation === 'delete' ? 'delete' : 'upsert',
+      entityId: String(mutation.entityId),
+      payload: mutation.payload && typeof mutation.payload === 'object' ? { ...mutation.payload } : {},
+      clientUpdatedAt:
+        typeof mutation.clientUpdatedAt === 'string'
+          ? mutation.clientUpdatedAt
+          : new Date().toISOString(),
+    }));
+}
+
+function sanitizeAuthSession(authSession) {
+  if (!authSession || typeof authSession !== 'object') {
+    return null;
+  }
+
+  return {
+    accessToken: String(authSession.accessToken || ''),
+    refreshToken: String(authSession.refreshToken || ''),
+    accessExpiresAt: String(authSession.accessExpiresAt || ''),
+    refreshExpiresAt: String(authSession.refreshExpiresAt || ''),
+    userProfile: {
+      id: String((authSession.userProfile && authSession.userProfile.id) || ''),
+      unionId: String((authSession.userProfile && authSession.userProfile.unionId) || ''),
+      displayName: String((authSession.userProfile && authSession.userProfile.displayName) || ''),
+      avatarUrl: String((authSession.userProfile && authSession.userProfile.avatarUrl) || ''),
+    },
+  };
 }
 
 function sanitizeState(rawState) {
@@ -55,9 +153,21 @@ function sanitizeState(rawState) {
     return getDefaultState();
   }
 
+  const mediaCacheIndex =
+    rawState.mediaCacheIndex && typeof rawState.mediaCacheIndex === 'object'
+      ? Object.keys(rawState.mediaCacheIndex).reduce((result, key) => {
+          result[key] = String(rawState.mediaCacheIndex[key] || '');
+          return result;
+        }, {})
+      : {};
+
   return {
     entries: sanitizeEntries(rawState.entries),
     tasks: sanitizeTasks(rawState.tasks),
+    pendingMutations: sanitizeMutations(rawState.pendingMutations),
+    lastSyncedVersion: Number(rawState.lastSyncedVersion || 0),
+    authSession: sanitizeAuthSession(rawState.authSession),
+    mediaCacheIndex,
   };
 }
 
@@ -68,12 +178,15 @@ function persistState(state) {
 
 function reconcileState(state) {
   let changed = false;
+  const nowIso = new Date().toISOString();
   const tasks = state.tasks.map((task) => {
-    if (task.status === 'pending' && dateUtils.isPastDate(task.dueAt)) {
+    if (!task.deletedAt && task.status === 'pending' && dateUtils.isPastDate(task.dueAt)) {
       changed = true;
       return {
         ...task,
         status: 'overdue',
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
       };
     }
 
@@ -84,7 +197,7 @@ function reconcileState(state) {
     changed,
     state: changed
       ? {
-          entries: state.entries,
+          ...state,
           tasks,
         }
       : state,
@@ -116,18 +229,26 @@ function sortTasks(tasks) {
   });
 }
 
+function getActiveEntries(state) {
+  return state.entries.filter((entry) => !entry.deletedAt);
+}
+
+function getActiveTasks(state) {
+  return state.tasks.filter((task) => !task.deletedAt);
+}
+
 function buildTaskRecords(state) {
   const entriesById = Object.create(null);
-  state.entries.forEach((entry) => {
+  getActiveEntries(state).forEach((entry) => {
     entriesById[entry.id] = entry;
   });
 
-  return sortTasks(state.tasks).map((task) => {
+  return sortTasks(getActiveTasks(state)).map((task) => {
     const entry = entriesById[task.entryId];
     return {
       ...task,
       noteText: entry ? entry.noteText : '这条原记录已删除',
-      photoPath: entry ? entry.photoPath : '',
+      photoPath: entry ? entry.localPhotoPath : '',
       entryCreatedAt: entry ? entry.createdAt : task.dueAt,
     };
   });
@@ -138,7 +259,7 @@ function getStats() {
   const taskRecords = buildTaskRecords(state);
 
   return {
-    entryCount: state.entries.length,
+    entryCount: getActiveEntries(state).length,
     pendingTaskCount: taskRecords.filter((task) => task.status === 'pending').length,
     overdueTaskCount: taskRecords.filter((task) => task.status === 'overdue').length,
     completedTaskCount: taskRecords.filter((task) => task.status === 'completed').length,
@@ -149,12 +270,13 @@ function getTimelineEntries() {
   const state = loadState();
   const taskByEntryId = Object.create(null);
 
-  state.tasks.forEach((task) => {
+  getActiveTasks(state).forEach((task) => {
     taskByEntryId[task.entryId] = task;
   });
 
-  return sortEntries(state.entries).map((entry) => ({
+  return sortEntries(getActiveEntries(state)).map((entry) => ({
     ...entry,
+    photoPath: entry.localPhotoPath,
     task: taskByEntryId[entry.id] || null,
   }));
 }
@@ -170,10 +292,85 @@ function getTaskSections() {
   };
 }
 
+function toCloudEntry(entry) {
+  return {
+    id: entry.id,
+    noteText: entry.noteText,
+    photoObjectPath: entry.photoObjectPath || '',
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+    clientUpdatedAt: entry.clientUpdatedAt,
+    deletedAt: entry.deletedAt || null,
+    sourcePlatform: entry.sourcePlatform || 'mini_program',
+  };
+}
+
+function toCloudTask(task) {
+  return {
+    id: task.id,
+    entryId: task.entryId,
+    dueAt: task.dueAt,
+    status: task.status,
+    completedAt: task.completedAt || null,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    clientUpdatedAt: task.clientUpdatedAt,
+    deletedAt: task.deletedAt || null,
+  };
+}
+
+function enqueueMutation(queue, mutation) {
+  const mutationKey = `${mutation.entityType}:${mutation.entityId}`;
+  const existing = {};
+  queue.forEach((item) => {
+    existing[`${item.entityType}:${item.entityId}`] = item;
+  });
+  existing[mutationKey] = mutation;
+  return Object.keys(existing)
+    .map((key) => existing[key])
+    .sort((left, right) => left.clientUpdatedAt.localeCompare(right.clientUpdatedAt));
+}
+
+function buildEntryMutation(entry, operation) {
+  return {
+    id: dateUtils.createId('mutation'),
+    entityType: 'entry',
+    operation,
+    entityId: entry.id,
+    payload: toCloudEntry(entry),
+    clientUpdatedAt: entry.clientUpdatedAt,
+  };
+}
+
+function buildTaskMutation(task, operation) {
+  return {
+    id: dateUtils.createId('mutation'),
+    entityType: 'task',
+    operation,
+    entityId: task.id,
+    payload: toCloudTask(task),
+    clientUpdatedAt: task.clientUpdatedAt,
+  };
+}
+
+function triggerBackgroundSync() {
+  if (!cloudConfig.isConfigured()) {
+    return;
+  }
+
+  const state = loadState();
+  if (!state.authSession || syncInFlight) {
+    return;
+  }
+
+  void syncNow().catch(() => {});
+}
+
 function createEntry(input) {
   const state = loadState();
   const nowIso = new Date().toISOString();
   const noteText = String(input.noteText || '').trim();
+  const shouldTrackCloud = !!state.authSession && cloudConfig.isConfigured();
 
   if (!noteText) {
     throw new Error('请输入巡田记录内容。');
@@ -182,14 +379,23 @@ function createEntry(input) {
   const entry = {
     id: dateUtils.createId('entry'),
     noteText,
-    photoPath: String(input.photoPath || ''),
+    photoObjectPath: '',
+    localPhotoPath: String(input.photoPath || ''),
     createdAt: nowIso,
     updatedAt: nowIso,
+    clientUpdatedAt: nowIso,
+    deletedAt: null,
+    sourcePlatform: 'mini_program',
+    syncVersion: 0,
+    cloudTracked: shouldTrackCloud,
   };
 
-  state.entries.unshift(entry);
-
   let task = null;
+  let pendingMutations = state.pendingMutations;
+
+  if (entry.cloudTracked) {
+    pendingMutations = enqueueMutation(pendingMutations, buildEntryMutation(entry, 'upsert'));
+  }
 
   if (input.dueAt) {
     task = {
@@ -198,12 +404,27 @@ function createEntry(input) {
       dueAt: String(input.dueAt),
       status: dateUtils.isPastDate(input.dueAt) ? 'overdue' : 'pending',
       completedAt: null,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      clientUpdatedAt: nowIso,
+      deletedAt: null,
+      syncVersion: 0,
+      cloudTracked: shouldTrackCloud,
     };
 
-    state.tasks.push(task);
+    if (task.cloudTracked) {
+      pendingMutations = enqueueMutation(pendingMutations, buildTaskMutation(task, 'upsert'));
+    }
   }
 
-  persistState(state);
+  persistState({
+    ...state,
+    entries: [entry, ...state.entries],
+    tasks: task ? [...state.tasks, task] : state.tasks,
+    pendingMutations,
+  });
+
+  triggerBackgroundSync();
 
   return {
     entry,
@@ -213,45 +434,239 @@ function createEntry(input) {
 
 function deleteEntry(entryId) {
   const state = loadState();
-  const removedEntries = state.entries.filter((entry) => entry.id === entryId);
+  const entry = state.entries.find((item) => item.id === entryId);
 
-  removedEntries.forEach((entry) => {
-    if (entry.photoPath) {
-      void mediaUtils.removeSavedPhoto(entry.photoPath);
-    }
-  });
+  if (!entry) {
+    return;
+  }
+
+  if (entry.localPhotoPath) {
+    void cloudMedia.removeLocalPhoto(entry.localPhotoPath);
+  }
+
+  const nowIso = new Date().toISOString();
+  let pendingMutations = state.pendingMutations;
+  let nextEntries = state.entries;
+  let nextTasks = state.tasks;
+
+  if (entry.cloudTracked) {
+    const deletedEntry = {
+      ...entry,
+      localPhotoPath: '',
+      updatedAt: nowIso,
+      clientUpdatedAt: nowIso,
+      deletedAt: nowIso,
+    };
+
+    nextEntries = state.entries.map((item) => (item.id === entryId ? deletedEntry : item));
+    pendingMutations = enqueueMutation(pendingMutations, buildEntryMutation(deletedEntry, 'delete'));
+
+    nextTasks = state.tasks.map((task) => {
+      if (task.entryId !== entryId) {
+        return task;
+      }
+
+      const deletedTask = {
+        ...task,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
+        deletedAt: nowIso,
+      };
+
+      pendingMutations = enqueueMutation(pendingMutations, buildTaskMutation(deletedTask, 'delete'));
+      return deletedTask;
+    });
+  } else {
+    nextEntries = state.entries.filter((item) => item.id !== entryId);
+    nextTasks = state.tasks.filter((task) => task.entryId !== entryId);
+  }
 
   persistState({
-    entries: state.entries.filter((entry) => entry.id !== entryId),
-    tasks: state.tasks.filter((task) => task.entryId !== entryId),
+    ...state,
+    entries: nextEntries,
+    tasks: nextTasks,
+    pendingMutations,
   });
+
+  triggerBackgroundSync();
 }
 
 function completeTask(taskId) {
   const state = loadState();
+  const task = state.tasks.find((item) => item.id === taskId);
   const nowIso = new Date().toISOString();
 
+  if (!task || task.deletedAt) {
+    return;
+  }
+
+  const completedTask = {
+    ...task,
+    status: 'completed',
+    completedAt: nowIso,
+    updatedAt: nowIso,
+    clientUpdatedAt: nowIso,
+  };
+
+  let pendingMutations = state.pendingMutations;
+  if (completedTask.cloudTracked) {
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildTaskMutation(completedTask, 'upsert')
+    );
+  }
+
   persistState({
-    entries: state.entries,
-    tasks: state.tasks.map((task) =>
-      task.id === taskId
-        ? {
-            ...task,
-            status: 'completed',
-            completedAt: nowIso,
-          }
-        : task
-    ),
+    ...state,
+    tasks: state.tasks.map((item) => (item.id === taskId ? completedTask : item)),
+    pendingMutations,
   });
+
+  triggerBackgroundSync();
 }
 
 function deleteTask(taskId) {
   const state = loadState();
+  const task = state.tasks.find((item) => item.id === taskId);
+
+  if (!task) {
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  let nextTasks = state.tasks;
+  let pendingMutations = state.pendingMutations;
+
+  if (task.cloudTracked) {
+    const deletedTask = {
+      ...task,
+      updatedAt: nowIso,
+      clientUpdatedAt: nowIso,
+      deletedAt: nowIso,
+    };
+
+    nextTasks = state.tasks.map((item) => (item.id === taskId ? deletedTask : item));
+    pendingMutations = enqueueMutation(pendingMutations, buildTaskMutation(deletedTask, 'delete'));
+  } else {
+    nextTasks = state.tasks.filter((item) => item.id !== taskId);
+  }
 
   persistState({
-    entries: state.entries,
-    tasks: state.tasks.filter((task) => task.id !== taskId),
+    ...state,
+    tasks: nextTasks,
+    pendingMutations,
   });
+
+  triggerBackgroundSync();
+}
+
+function isSignedInToCloud() {
+  const state = loadState();
+  return !!state.authSession;
+}
+
+function isCloudConfigured() {
+  return cloudConfig.isConfigured();
+}
+
+function getCloudStatus() {
+  const state = loadState();
+  const isSignedIn = !!state.authSession;
+  const displayName =
+    state.authSession &&
+    state.authSession.userProfile &&
+    String(state.authSession.userProfile.displayName || '').trim();
+
+  let headline = '当前处于本机模式';
+  if (!cloudConfig.isConfigured()) {
+    headline = '当前还没接入云端环境';
+  } else if (signInInFlight) {
+    headline = '正在通过微信登录云端';
+  } else if (syncInFlight) {
+    headline = '正在同步 FarmerNote 云端数据';
+  } else if (isSignedIn) {
+    headline = displayName ? `已登录 ${displayName}` : '已登录云端账号';
+  }
+
+  let detail = '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
+  if (!cloudConfig.isConfigured()) {
+    detail = '先在 cloud-config.js 里配置 Supabase Functions 地址，再去微信后台补上合法 request 域名。';
+  } else if (lastSyncError) {
+    detail = lastSyncError;
+  } else if (isSignedIn && state.pendingMutations.length > 0) {
+    detail = `还有 ${state.pendingMutations.length} 条新变更待上传。当前版本只同步登录后产生的新数据，不会自动迁移旧本地记录。`;
+  } else if (isSignedIn && lastSyncAt) {
+    detail = `云端和本机已对齐，上次同步时间 ${lastSyncAt}。`;
+  } else if (isSignedIn) {
+    detail = '新创建的记录会自动同步到云端，并提供给同账号的小程序和 Flutter 端共享。';
+  }
+
+  return {
+    isConfigured: cloudConfig.isConfigured(),
+    isSignedIn,
+    isBusy: !!syncInFlight || !!signInInFlight,
+    actionLabel: isSignedIn ? (state.pendingMutations.length > 0 ? '立即同步' : '检查云端更新') : '微信登录',
+    headline,
+    detail,
+  };
+}
+
+async function signInToCloud() {
+  if (signInInFlight) {
+    return signInInFlight;
+  }
+
+  signInInFlight = (async () => {
+    const session = await cloudAuth.loginWithWeChat();
+    const state = loadState();
+    persistState({
+      ...state,
+      authSession: session,
+    });
+    lastSyncError = '';
+    await syncNow();
+    return session;
+  })();
+
+  try {
+    return await signInInFlight;
+  } finally {
+    signInInFlight = null;
+  }
+}
+
+async function syncNow() {
+  if (syncInFlight) {
+    return syncInFlight;
+  }
+
+  syncInFlight = (async () => {
+    const state = loadState();
+    if (!cloudConfig.isConfigured() || !state.authSession) {
+      return state;
+    }
+
+    try {
+      const result = await cloudSync.syncState(state);
+      persistState(result.state);
+      lastSyncError = '';
+      const now = new Date();
+      lastSyncAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(
+        now.getHours()
+      )}:${pad(now.getMinutes())}`;
+      return result.state;
+    } catch (error) {
+      lastSyncError =
+        (error && error.message) || '云同步暂时失败了，但本机数据已经保留。稍后再试即可。';
+      throw error;
+    }
+  })();
+
+  try {
+    return await syncInFlight;
+  } finally {
+    syncInFlight = null;
+  }
 }
 
 module.exports = {
@@ -260,8 +675,13 @@ module.exports = {
   createEntry,
   deleteEntry,
   deleteTask,
+  getCloudStatus,
   getStats,
   getTaskSections,
   getTimelineEntries,
+  isCloudConfigured,
+  isSignedInToCloud,
   loadState,
+  signInToCloud,
+  syncNow,
 };

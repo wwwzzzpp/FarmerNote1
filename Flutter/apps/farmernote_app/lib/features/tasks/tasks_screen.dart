@@ -25,147 +25,160 @@ class TasksScreen extends StatelessWidget {
         completedTasks.isNotEmpty;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ScreenSectionCard(
-              margin: EdgeInsets.zero,
-              backgroundColor: AppColors.hero,
-              borderColor: AppColors.borderDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'TASKS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 2,
-                      color: Color(0xFF6D674F),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '待办提醒',
-                    style: TextStyle(
-                      fontSize: isCompact ? 24 : 26,
-                      height: 1.25,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textHero,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!hasTasks)
-              const ScreenSectionCard(
+      child: RefreshIndicator(
+        onRefresh: controller.isSignedIn ? controller.syncNow : () async {},
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              ScreenSectionCard(
+                margin: EdgeInsets.zero,
+                backgroundColor: AppColors.hero,
+                borderColor: AppColors.borderDark,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      '还没有定时任务',
+                    const Text(
+                      'TASKS',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        letterSpacing: 2,
+                        color: Color(0xFF6D674F),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
-                      '在“记录”页打开提醒时间，这里就会自动接住。',
-                      textAlign: TextAlign.center,
+                      '待办提醒',
                       style: TextStyle(
-                        fontSize: 15,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
+                        fontSize: isCompact ? 24 : 26,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHero,
                       ),
                     ),
                   ],
                 ),
               ),
-            if (upcomingTasks.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 24),
-              const Text(
-                '即将到来',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF59533F),
+              if (!hasTasks)
+                const ScreenSectionCard(
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        '还没有定时任务',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        '在“记录”页打开提醒时间，这里就会自动接住。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.7,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '未来的巡田动作',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              ...upcomingTasks.map(
-                (task) => _TaskCard(
-                  task: task,
-                  isFocused: task.id == controller.focusTaskId,
-                  onComplete: () async {
-                    await controller.completeTask(task.id);
-                    if (context.mounted) {
-                      showAppSnackBar(context, '已完成');
-                    }
-                  },
-                  onDelete: () => _confirmDelete(context, task),
+              if (upcomingTasks.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 24),
+                const Text(
+                  '即将到来',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF59533F),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  '未来的巡田动作',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                ...upcomingTasks.map(
+                  (task) => _TaskCard(
+                    task: task,
+                    isFocused: task.id == controller.focusTaskId,
+                    onComplete: () async {
+                      await controller.completeTask(task.id);
+                      if (context.mounted) {
+                        showAppSnackBar(context, '已完成');
+                      }
+                    },
+                    onDelete: () => _confirmDelete(context, task),
+                  ),
+                ),
+              ],
+              if (overdueTasks.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 24),
+                const Text(
+                  '已逾期',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF59533F),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '时间到了但还没处理',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                ...overdueTasks.map(
+                  (task) => _TaskCard(
+                    task: task,
+                    isFocused: task.id == controller.focusTaskId,
+                    onComplete: () async {
+                      await controller.completeTask(task.id);
+                      if (context.mounted) {
+                        showAppSnackBar(context, '已完成');
+                      }
+                    },
+                    onDelete: () => _confirmDelete(context, task),
+                  ),
+                ),
+              ],
+              if (completedTasks.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 24),
+                const Text(
+                  '已完成',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF59533F),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '已经处理完的提醒',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                ...completedTasks.map(
+                  (task) => _TaskCard(
+                    task: task,
+                    isFocused: task.id == controller.focusTaskId,
+                    onDelete: () => _confirmDelete(context, task),
+                  ),
+                ),
+              ],
             ],
-            if (overdueTasks.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 24),
-              const Text(
-                '已逾期',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF59533F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '时间到了但还没处理',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              ...overdueTasks.map(
-                (task) => _TaskCard(
-                  task: task,
-                  isFocused: task.id == controller.focusTaskId,
-                  onComplete: () async {
-                    await controller.completeTask(task.id);
-                    if (context.mounted) {
-                      showAppSnackBar(context, '已完成');
-                    }
-                  },
-                  onDelete: () => _confirmDelete(context, task),
-                ),
-              ),
-            ],
-            if (completedTasks.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 24),
-              const Text(
-                '已完成',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF59533F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '已经处理完的提醒',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              ...completedTasks.map(
-                (task) => _TaskCard(
-                  task: task,
-                  isFocused: task.id == controller.focusTaskId,
-                  onDelete: () => _confirmDelete(context, task),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -259,9 +272,9 @@ class _TaskCard extends StatelessWidget {
           if (task.hasPhoto) ...<Widget>[
             const SizedBox(height: 14),
             GestureDetector(
-              onTap: () => _showPhotoPreview(context, task.photoDataUri),
+              onTap: () => _showPhotoPreview(context, task.photoSource),
               child: StoredPhoto(
-                dataUri: task.photoDataUri,
+                source: task.photoSource,
                 width: 220,
                 height: 164,
               ),
@@ -298,14 +311,14 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  void _showPhotoPreview(BuildContext context, String dataUri) {
+  void _showPhotoPreview(BuildContext context, String source) {
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: InteractiveViewer(
           child: StoredPhoto(
-            dataUri: dataUri,
+            source: source,
             fit: BoxFit.contain,
             borderRadius: BorderRadius.circular(24),
           ),

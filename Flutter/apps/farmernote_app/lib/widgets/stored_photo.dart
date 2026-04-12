@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 class StoredPhoto extends StatelessWidget {
   const StoredPhoto({
-    required this.dataUri,
+    required this.source,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
@@ -13,14 +14,14 @@ class StoredPhoto extends StatelessWidget {
     super.key,
   });
 
-  final String dataUri;
+  final String source;
   final double? width;
   final double? height;
   final BoxFit fit;
   final BorderRadius borderRadius;
 
-  static Uint8List? decode(String dataUri) {
-    if (dataUri.isEmpty) {
+  static Uint8List? decodeDataUri(String dataUri) {
+    if (dataUri.isEmpty || !dataUri.startsWith('data:')) {
       return null;
     }
 
@@ -37,15 +38,37 @@ class StoredPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bytes = decode(dataUri);
-    if (bytes == null) {
+    if (source.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (source.startsWith('data:')) {
+      final bytes = decodeDataUri(source);
+      if (bytes == null) {
+        return const SizedBox.shrink();
+      }
+
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: Image.memory(
+          bytes,
+          width: width,
+          height: height,
+          fit: fit,
+          gaplessPlayback: true,
+        ),
+      );
+    }
+
+    final file = File(source);
+    if (!file.existsSync()) {
       return const SizedBox.shrink();
     }
 
     return ClipRRect(
       borderRadius: borderRadius,
-      child: Image.memory(
-        bytes,
+      child: Image.file(
+        file,
         width: width,
         height: height,
         fit: fit,

@@ -21,6 +21,19 @@
   </view>
 
   <view class="section-card">
+    <text class="section-title">{{cloudStatus.headline}}</text>
+    <text class="helper-text">{{cloudStatus.detail}}</text>
+    <button
+      class="action-button primary-button small-button cloud-sync-button"
+      bindtap="handleCloudPrimaryAction"
+      loading="{{cloudStatus.isBusy}}"
+      disabled="{{!cloudStatus.isConfigured}}"
+    >
+      {{cloudStatus.actionLabel}}
+    </button>
+  </view>
+
+  <view class="section-card">
     <view class="section-heading">
       <view class="section-heading-main">
         <text class="toggle-caption">提示词中可以包含：提醒我、提醒一下、提醒下、记得、别忘、定时、到时、到时候、闹钟。</text>

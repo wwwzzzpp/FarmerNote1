@@ -1,0 +1,5 @@
+{
+  "FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL": "https://your-project-ref.supabase.co/functions/v1",
+  "FARMERNOTE_FLUTTER_WECHAT_APP_ID": "wx_your_open_platform_app_id",
+  "FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK": "https://your.domain.com/wechat/"
+}

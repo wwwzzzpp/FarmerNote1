@@ -77,3 +77,8 @@
   font-size: 22rpx;
   color: #756f61;
 }
+
+.cloud-sync-button {
+  width: 240rpx;
+  margin-top: 20rpx;
+}

@@ -51,15 +51,23 @@ Page({
   },
 
   onShow() {
-    this.refreshPage();
+    void this.refreshPage();
   },
 
-  onPullDownRefresh() {
-    this.refreshPage();
+  async onPullDownRefresh() {
+    await this.refreshPage();
     wx.stopPullDownRefresh();
   },
 
-  refreshPage() {
+  async refreshPage() {
+    if (store.isSignedInToCloud()) {
+      try {
+        await store.syncNow();
+      } catch (_) {
+        // Keep local tasks visible when cloud sync fails.
+      }
+    }
+
     const sections = store.getTaskSections();
     const upcomingTasks = sections.upcomingTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
     const overdueTasks = sections.overdueTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
@@ -80,7 +88,7 @@ Page({
     const { taskId } = event.currentTarget.dataset;
 
     store.completeTask(taskId);
-    this.refreshPage();
+    void this.refreshPage();
     wx.showToast({
       title: '已完成',
       icon: 'success',
@@ -99,7 +107,7 @@ Page({
         }
 
         store.deleteTask(taskId);
-        this.refreshPage();
+        void this.refreshPage();
         wx.showToast({
           title: '已删除',
           icon: 'success',

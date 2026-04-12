@@ -10,6 +10,8 @@ import 'farmernote_controller.dart';
 class FarmerNoteApp extends StatelessWidget {
   const FarmerNoteApp({required this.controller, super.key});
 
+  static const double _appTextScale = 0.94;
+
   final FarmerNoteController controller;
 
   @override
@@ -24,7 +26,8 @@ class FarmerNoteApp extends StatelessWidget {
         }
 
         return MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1,
+          minScaleFactor: _appTextScale,
+          maxScaleFactor: _appTextScale,
           child: child,
         );
       },

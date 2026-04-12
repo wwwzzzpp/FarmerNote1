@@ -6,6 +6,10 @@
 
 [`EDITING_GUIDE.md`](./EDITING_GUIDE.md)
 
+如果你想用 Android Studio 打开、配置并运行这个 Flutter 工程，请看：
+
+[`ANDROID_STUDIO_RUN_GUIDE.md`](./ANDROID_STUDIO_RUN_GUIDE.md)
+
 当前工程路径：
 
 ```text
@@ -35,6 +39,26 @@ Flutter/apps/farmernote_app
   - `flutter analyze` 已通过
   - `flutter test` 已通过
 
+## 云端同步现状
+
+当前仓库已经接入了 FarmerNote 的云同步主干：
+
+- Flutter
+  - 本地状态新增了 `authSession / pendingMutations / lastSyncedVersion / mediaCacheIndex`
+  - 记录、待办、图片改成了本地优先，登录后自动走云同步队列
+  - 图片改成 `photoObjectPath + localPhotoPath` 双层模型，不再以 base64 作为权威数据
+- 小程序
+  - 已新增 `utils/cloud-auth.js / cloud-sync.js / cloud-media.js`
+  - 登录后会把新产生的记录、待办、图片同步到 Supabase
+- 服务端
+  - 已新增 [supabase/README.md](/Users/wzp/Documents/GitHub/FarmerNote1/supabase/README.md) 和对应 migration / Edge Functions
+
+当前默认策略：
+
+- 只有“登录后新产生的数据”会进入云同步
+- 历史旧本地数据不会自动迁移到云端
+- 系统日历仍然只属于当前设备，不参与跨端同步
+
 ## 目录结构
 
 ```text
@@ -43,7 +67,8 @@ Flutter/apps/farmernote_app/
     app/         应用入口与控制器
     features/    record / timeline / tasks 三个页面
     models/      数据模型
-    services/    日历、媒体、本地存储
+    services/    日历、媒体、本地存储、云同步
+    config/      云端配置
     theme/       主题与颜色
     utils/       日期工具、提醒语义解析
     widgets/     通用 UI 组件
@@ -77,6 +102,93 @@ flutter test
 ```bash
 flutter devices
 ```
+
+## 云同步配置
+
+### 1. 部署 Supabase 侧
+
+先看：
+
+[`/Users/wzp/Documents/GitHub/FarmerNote1/supabase/README.md`](/Users/wzp/Documents/GitHub/FarmerNote1/supabase/README.md)
+
+至少需要先完成：
+
+- 创建 Supabase 项目
+- 执行 `supabase/migrations/202604130001_cloud_sync.sql`
+- 部署 6 个 Edge Functions
+- 配置 `entry-photos` 私有 bucket
+- 写入微信和 Supabase 的服务端环境变量
+
+### 2. 配置 Flutter 运行参数
+
+Flutter 客户端通过 `dart-define` 读取云端参数，代码入口在：
+
+[`cloud_config.dart`](/Users/wzp/Documents/GitHub/FarmerNote1/Flutter/apps/farmernote_app/lib/config/cloud_config.dart)
+
+你至少要传这两个：
+
+```bash
+--dart-define=FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL=https://<project-ref>.supabase.co/functions/v1
+--dart-define=FARMERNOTE_FLUTTER_WECHAT_APP_ID=你的开放平台AppID
+```
+
+iOS 如果用了微信登录，还要再传：
+
+```bash
+--dart-define=FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK=https://你的-universal-link/
+```
+
+Android 真机调试示例：
+
+```bash
+flutter run -d <device-id> \
+  --dart-define=FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL=https://<project-ref>.supabase.co/functions/v1 \
+  --dart-define=FARMERNOTE_FLUTTER_WECHAT_APP_ID=wx1234567890abcdef \
+  --dart-define=FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK=https://your.domain.com/app/
+```
+
+也可以直接使用模板文件：
+
+```bash
+cp dart_defines.example.json dart_defines.local.json
+flutter run -d <device-id> --dart-define-from-file=dart_defines.local.json
+```
+
+### 3. 配置小程序
+
+小程序端的云地址在：
+
+[`cloud-config.js`](/Users/wzp/Documents/GitHub/FarmerNote1/miniprogram/utils/cloud-config.js)
+
+把这里的：
+
+```js
+const SUPABASE_FUNCTIONS_BASE_URL = '';
+```
+
+改成你的实际函数地址，例如：
+
+```js
+const SUPABASE_FUNCTIONS_BASE_URL = 'https://<project-ref>.supabase.co/functions/v1';
+```
+
+然后去微信公众平台后台补上合法域名：
+
+- `request` 合法域名
+- `uploadFile` 合法域名
+- `downloadFile` 合法域名
+
+至少要包含你的 Supabase 项目域名，例如：
+
+```text
+https://<project-ref>.supabase.co
+```
+
+当前 [project.config.json](/Users/wzp/Documents/GitHub/FarmerNote1/miniprogram/project.config.json) 里 `urlCheck` 是关闭的，只方便本地调试；真机和正式版依然要去微信后台配域名。
+
+如果你现在要做真实联调，请直接看：
+
+[`/Users/wzp/Documents/GitHub/FarmerNote1/CLOUD_SYNC_SETUP.md`](/Users/wzp/Documents/GitHub/FarmerNote1/CLOUD_SYNC_SETUP.md)
 
 ## 本机当前环境状态
 

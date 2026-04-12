@@ -43,7 +43,7 @@ class _RecordScreenState extends State<RecordScreen> {
   String _previewTimeText = '';
   String _previewHint = '';
   String _feedbackMessage = '';
-  String _photoDataUri = '';
+  String _photoLocalPath = '';
   bool _isSaving = false;
 
   @override
@@ -255,12 +255,12 @@ class _RecordScreenState extends State<RecordScreen> {
 
   Future<void> _pickPhoto() async {
     try {
-      final photoDataUri = await _mediaService.chooseCameraPhotoDataUri();
+      final photoLocalPath = await _mediaService.chooseCameraPhotoPath();
       if (!mounted) {
         return;
       }
       setState(() {
-        _photoDataUri = photoDataUri;
+        _photoLocalPath = photoLocalPath;
       });
     } on MediaServiceException catch (error) {
       if (error.code == 'cancel') {
@@ -305,19 +305,24 @@ class _RecordScreenState extends State<RecordScreen> {
       final result = await widget.controller.createEntry(
         noteText: noteText,
         dueAt: dueAt,
-        photoDataUri: _photoDataUri,
+        photoLocalPath: _photoLocalPath,
       );
 
       final suggestion = farmer_date.getSuggestedReminderParts();
-      var feedbackMessage = _photoDataUri.isNotEmpty
+      var feedbackMessage = _photoLocalPath.isNotEmpty
           ? '文字和现场照片都已保存到本机时间线。'
           : '记录已保存到本机时间线。';
+      if (widget.controller.isSignedIn && result.entry.cloudTracked) {
+        feedbackMessage = _photoLocalPath.isNotEmpty
+            ? '记录、照片都已保存，并已加入云同步队列。'
+            : '记录已保存，并已加入云同步队列。';
+      }
       if (result.task?.status == TaskStatus.overdue) {
-        feedbackMessage = _photoDataUri.isNotEmpty
+        feedbackMessage = _photoLocalPath.isNotEmpty
             ? '记录、照片都已保存，提醒时间已经过去，已自动放进逾期待办。'
             : '记录已保存，提醒时间已经过去，已自动放进逾期待办。';
       } else if (result.task != null) {
-        feedbackMessage = _photoDataUri.isNotEmpty
+        feedbackMessage = _photoLocalPath.isNotEmpty
             ? '记录、照片和待办都已保存，正在尝试写入手机日历提醒。'
             : '记录和待办都已保存，正在尝试写入手机日历提醒。';
       }
@@ -339,7 +344,7 @@ class _RecordScreenState extends State<RecordScreen> {
         _previewTimeText = '';
         _previewHint = '';
         _feedbackMessage = feedbackMessage;
-        _photoDataUri = '';
+        _photoLocalPath = '';
       });
 
       if (mounted) {
@@ -350,7 +355,7 @@ class _RecordScreenState extends State<RecordScreen> {
         await _trySyncPhoneCalendar(
           noteText: noteText,
           dueAt: dueAt,
-          hasPhoto: result.entry.photoDataUri.isNotEmpty,
+          hasPhoto: result.entry.hasPhoto,
         );
       }
     } catch (_) {
@@ -433,382 +438,441 @@ class _RecordScreenState extends State<RecordScreen> {
     final isCompact = MediaQuery.sizeOf(context).width < 380;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ScreenSectionCard(
-              margin: EdgeInsets.zero,
-              backgroundColor: AppColors.hero,
-              borderColor: AppColors.borderDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'FARMER NOTE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 2,
-                      color: Color(0xFF6D674F),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '今天田里看到啥，先记下来。',
-                    style: TextStyle(
-                      fontSize: isCompact ? 24 : 26,
-                      height: 1.25,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textHero,
-                    ),
-                  ),
-                  SizedBox(height: isCompact ? 16 : 18),
-                  Row(
-                    children: <Widget>[
-                      _StatCard(
-                        label: '总记录',
-                        value: '${stats['entryCount'] ?? 0}',
+      child: RefreshIndicator(
+        onRefresh: widget.controller.isSignedIn
+            ? widget.controller.syncNow
+            : () async {},
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              ScreenSectionCard(
+                margin: EdgeInsets.zero,
+                backgroundColor: AppColors.hero,
+                borderColor: AppColors.borderDark,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'FARMER NOTE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 2,
+                        color: Color(0xFF6D674F),
+                        fontWeight: FontWeight.w600,
                       ),
-                      SizedBox(width: isCompact ? 10 : 12),
-                      _StatCard(
-                        label: '待办中',
-                        value: '${stats['pendingTaskCount'] ?? 0}',
-                      ),
-                      SizedBox(width: isCompact ? 10 : 12),
-                      _StatCard(
-                        label: '已逾期',
-                        value: '${stats['overdueTaskCount'] ?? 0}',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ScreenSectionCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    '提示词中可以包含：提醒我、提醒一下、提醒下、记得、别忘、定时、到时、到时候、闹钟。',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3EFE4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFD6CCB5)),
+                    const SizedBox(height: 12),
+                    Text(
+                      '今天田里看到啥，先记下来。',
+                      style: TextStyle(
+                        fontSize: isCompact ? 24 : 26,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHero,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    SizedBox(height: isCompact ? 16 : 18),
+                    Row(
                       children: <Widget>[
-                        TextField(
-                          controller: _noteController,
-                          maxLines: 2,
-                          minLines: 2,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isCollapsed: true,
-                            hintText: '提醒我东南角麦苗偏黄，沟边有积水。\n下午三点再去补看。',
-                          ),
-                          style: TextStyle(
-                            fontSize: isCompact ? 17 : 18,
-                            height: 1.7,
-                          ),
+                        _StatCard(
+                          label: '总记录',
+                          value: '${stats['entryCount'] ?? 0}',
                         ),
-                        if (_photoDataUri.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 14),
-                          GestureDetector(
-                            onTap: () =>
-                                _showPhotoPreview(context, _photoDataUri),
-                            child: StoredPhoto(
-                              dataUri: _photoDataUri,
-                              width: double.infinity,
-                              height: 180,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            '已附带现场照片，点图可放大查看。',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF756F61),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        Row(
-                          children: <Widget>[
-                            FarmerButton(
-                              label: _photoDataUri.isNotEmpty ? '重拍照片' : '拍照记录',
-                              tone: FarmerButtonTone.secondary,
-                              small: true,
-                              onPressed: _pickPhoto,
-                            ),
-                            if (_photoDataUri.isNotEmpty) ...<Widget>[
-                              const SizedBox(width: 12),
-                              FarmerButton(
-                                label: '删除照片',
-                                tone: FarmerButtonTone.ghost,
-                                small: true,
-                                onPressed: () {
-                                  setState(() {
-                                    _photoDataUri = '';
-                                  });
-                                },
-                              ),
-                            ],
-                            const Spacer(),
-                            SizedBox(
-                              width: isCompact ? 136 : 144,
-                              child: FarmerButton(
-                                label: '保存这条记录',
-                                loading: _isSaving,
-                                onPressed: _handleSave,
-                              ),
-                            ),
-                          ],
+                        SizedBox(width: isCompact ? 10 : 12),
+                        _StatCard(
+                          label: '待办中',
+                          value: '${stats['pendingTaskCount'] ?? 0}',
+                        ),
+                        SizedBox(width: isCompact ? 10 : 12),
+                        _StatCard(
+                          label: '已逾期',
+                          value: '${stats['overdueTaskCount'] ?? 0}',
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          '需要定时处理吗？',
-                          style: TextStyle(
-                            fontSize: isCompact ? 15 : 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                  ],
+                ),
+              ),
+              ScreenSectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.controller.cloudStatusHeadline,
+                      style: TextStyle(
+                        fontSize: isCompact ? 17 : 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.controller.cloudStatusDetail,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.65,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: isCompact ? 132 : 152,
+                        child: FarmerButton(
+                          label: widget.controller.cloudActionLabel,
+                          loading:
+                              widget.controller.isSyncing ||
+                              widget.controller.isAuthenticating,
+                          onPressed: widget.controller.isCloudConfigured
+                              ? () async {
+                                  if (widget.controller.isSignedIn) {
+                                    await widget.controller.syncNow();
+                                  } else {
+                                    await widget.controller.signInToCloud();
+                                  }
+                                }
+                              : null,
                         ),
                       ),
-                      Switch(
-                        value: _reminderEnabled,
-                        activeThumbColor: AppColors.primary,
-                        onChanged: (value) {
-                          _setManualOverrideMessage(
-                            '识别到“$_smartReminderMatchedText”，但你选择了手动控制提醒。',
-                          );
-                          setState(() {
-                            _reminderEnabled = value;
-                          });
-                          _updatePreview();
-                        },
+                    ),
+                  ],
+                ),
+              ),
+              ScreenSectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      '提示词中可以包含：提醒我、提醒一下、提醒下、记得、别忘、定时、到时、到时候、闹钟。',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
                       ),
-                    ],
-                  ),
-                  if (_smartReminderVisible) ...<Widget>[
+                    ),
                     const SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECE6D6),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFD4C9AF)),
+                        color: const Color(0xFFF3EFE4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFD6CCB5)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      '系统识别到定时处理',
-                                      style: TextStyle(
-                                        fontSize: isCompact ? 15 : 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF4F4937),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _smartReminderMessage,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        height: 1.65,
-                                        color: Color(0xFF655F50),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              StatusChip(
-                                label: _smartReminderTag,
-                                tone: _smartReminderTone,
-                              ),
-                            ],
+                          TextField(
+                            controller: _noteController,
+                            maxLines: 2,
+                            minLines: 2,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isCollapsed: true,
+                              hintText: '提醒我东南角麦苗偏黄，沟边有积水。\n下午三点再去补看。',
+                            ),
+                            style: TextStyle(
+                              fontSize: isCompact ? 17 : 18,
+                              height: 1.7,
+                            ),
                           ),
-                          if (_smartReminderMatchedText.isNotEmpty) ...<Widget>[
+                          if (_photoLocalPath.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 14),
+                            GestureDetector(
+                              onTap: () =>
+                                  _showPhotoPreview(context, _photoLocalPath),
+                              child: StoredPhoto(
+                                source: _photoLocalPath,
+                                width: double.infinity,
+                                height: 180,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
                             const SizedBox(height: 10),
-                            Text(
-                              '命中内容：$_smartReminderMatchedText',
-                              style: const TextStyle(
+                            const Text(
+                              '已附带现场照片，点图可放大查看。',
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF756F61),
                               ),
                             ),
                           ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: <Widget>[
+                              FarmerButton(
+                                label: _photoLocalPath.isNotEmpty
+                                    ? '重拍照片'
+                                    : '拍照记录',
+                                tone: FarmerButtonTone.secondary,
+                                small: true,
+                                onPressed: _pickPhoto,
+                              ),
+                              if (_photoLocalPath.isNotEmpty) ...<Widget>[
+                                const SizedBox(width: 12),
+                                FarmerButton(
+                                  label: '删除照片',
+                                  tone: FarmerButtonTone.ghost,
+                                  small: true,
+                                  onPressed: () {
+                                    setState(() {
+                                      _photoLocalPath = '';
+                                    });
+                                  },
+                                ),
+                              ],
+                              const Spacer(),
+                              SizedBox(
+                                width: isCompact ? 136 : 144,
+                                child: FarmerButton(
+                                  label: '保存这条记录',
+                                  loading: _isSaving,
+                                  onPressed: _handleSave,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                  if (_reminderEnabled) ...<Widget>[
-                    const SizedBox(height: 18),
-                    _PickerField(
-                      label: '日期',
-                      value: _reminderDate,
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final initial =
-                            DateTime.tryParse(
-                              '$_reminderDate ${_reminderTime.isEmpty ? '09:00:00' : '$_reminderTime:00'}',
-                            ) ??
-                            now;
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: initial,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked == null) {
-                          return;
-                        }
-                        _setManualOverrideMessage(
-                          '识别到“$_smartReminderMatchedText”，但当前时间已按你的手动修改为准。',
-                        );
-                        setState(() {
-                          _reminderDate = farmer_date.formatDateInput(picked);
-                        });
-                        _updatePreview();
-                      },
+                    const SizedBox(height: 20),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            '需要定时处理吗？',
+                            style: TextStyle(
+                              fontSize: isCompact ? 15 : 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Switch(
+                          value: _reminderEnabled,
+                          activeThumbColor: AppColors.primary,
+                          onChanged: (value) {
+                            _setManualOverrideMessage(
+                              '识别到“$_smartReminderMatchedText”，但你选择了手动控制提醒。',
+                            );
+                            setState(() {
+                              _reminderEnabled = value;
+                            });
+                            _updatePreview();
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    _PickerField(
-                      label: '时间',
-                      value: _reminderTime,
-                      onTap: () async {
-                        final parts = _reminderTime.split(':');
-                        final initial = TimeOfDay(
-                          hour: parts.isNotEmpty
-                              ? int.tryParse(parts[0]) ?? 9
-                              : 9,
-                          minute: parts.length > 1
-                              ? int.tryParse(parts[1]) ?? 0
-                              : 0,
-                        );
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: initial,
-                        );
-                        if (picked == null) {
-                          return;
-                        }
-                        _setManualOverrideMessage(
-                          '识别到“$_smartReminderMatchedText”，但当前时间已按你的手动修改为准。',
-                        );
-                        setState(() {
-                          _reminderTime =
-                              '${farmer_date.pad(picked.hour)}:${farmer_date.pad(picked.minute)}';
-                        });
-                        _updatePreview();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '保存后会自动尝试把这条任务写入手机系统日历。如果当前平台或权限不支持，记录本身仍会正常保存。',
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
+                    if (_smartReminderVisible) ...<Widget>[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECE6D6),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFD4C9AF)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        '系统识别到定时处理',
+                                        style: TextStyle(
+                                          fontSize: isCompact ? 15 : 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF4F4937),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _smartReminderMessage,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          height: 1.65,
+                                          color: Color(0xFF655F50),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                StatusChip(
+                                  label: _smartReminderTag,
+                                  tone: _smartReminderTone,
+                                ),
+                              ],
+                            ),
+                            if (_smartReminderMatchedText
+                                .isNotEmpty) ...<Widget>[
+                              const SizedBox(height: 10),
+                              Text(
+                                '命中内容：$_smartReminderMatchedText',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF756F61),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (_previewTimeText.isNotEmpty)
-              ScreenSectionCard(
-                backgroundColor: AppColors.surfaceMuted,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      '这条提醒会出现在待办里',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF655F50)),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _previewTimeText,
-                      style: TextStyle(
-                        fontSize: isCompact ? 22 : 24,
-                        fontWeight: FontWeight.w700,
+                    ],
+                    if (_reminderEnabled) ...<Widget>[
+                      const SizedBox(height: 18),
+                      _PickerField(
+                        label: '日期',
+                        value: _reminderDate,
+                        onTap: () async {
+                          final now = DateTime.now();
+                          final initial =
+                              DateTime.tryParse(
+                                '$_reminderDate ${_reminderTime.isEmpty ? '09:00:00' : '$_reminderTime:00'}',
+                              ) ??
+                              now;
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: initial,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked == null) {
+                            return;
+                          }
+                          _setManualOverrideMessage(
+                            '识别到“$_smartReminderMatchedText”，但当前时间已按你的手动修改为准。',
+                          );
+                          setState(() {
+                            _reminderDate = farmer_date.formatDateInput(picked);
+                          });
+                          _updatePreview();
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _previewHint,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
+                      const SizedBox(height: 12),
+                      _PickerField(
+                        label: '时间',
+                        value: _reminderTime,
+                        onTap: () async {
+                          final parts = _reminderTime.split(':');
+                          final initial = TimeOfDay(
+                            hour: parts.isNotEmpty
+                                ? int.tryParse(parts[0]) ?? 9
+                                : 9,
+                            minute: parts.length > 1
+                                ? int.tryParse(parts[1]) ?? 0
+                                : 0,
+                          );
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: initial,
+                          );
+                          if (picked == null) {
+                            return;
+                          }
+                          _setManualOverrideMessage(
+                            '识别到“$_smartReminderMatchedText”，但当前时间已按你的手动修改为准。',
+                          );
+                          setState(() {
+                            _reminderTime =
+                                '${farmer_date.pad(picked.hour)}:${farmer_date.pad(picked.minute)}';
+                          });
+                          _updatePreview();
+                        },
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '保存后会自动尝试把这条任务写入手机系统日历。如果当前平台或权限不支持，记录本身仍会正常保存。',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.7,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            if (_feedbackMessage.isNotEmpty)
-              ScreenSectionCard(
-                backgroundColor: AppColors.surfaceSuccess,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      '刚刚保存成功',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+              if (_previewTimeText.isNotEmpty)
+                ScreenSectionCard(
+                  backgroundColor: AppColors.surfaceMuted,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '这条提醒会出现在待办里',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF655F50),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _feedbackMessage,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
+                      const SizedBox(height: 10),
+                      Text(
+                        _previewTimeText,
+                        style: TextStyle(
+                          fontSize: isCompact ? 22 : 24,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        _previewHint,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.7,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+              if (_feedbackMessage.isNotEmpty)
+                ScreenSectionCard(
+                  backgroundColor: AppColors.surfaceSuccess,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '刚刚保存成功',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _feedbackMessage,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.7,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showPhotoPreview(BuildContext context, String dataUri) {
+  void _showPhotoPreview(BuildContext context, String source) {
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: InteractiveViewer(
           child: StoredPhoto(
-            dataUri: dataUri,
+            source: source,
             fit: BoxFit.contain,
             borderRadius: BorderRadius.circular(24),
           ),

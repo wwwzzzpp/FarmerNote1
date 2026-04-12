@@ -41,6 +41,14 @@ Page({
       overdueTaskCount: 0,
       completedTaskCount: 0,
     },
+    cloudStatus: {
+      isConfigured: false,
+      isSignedIn: false,
+      isBusy: false,
+      actionLabel: '微信登录',
+      headline: '当前处于本机模式',
+      detail: '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。',
+    },
   },
 
   onLoad() {
@@ -48,7 +56,7 @@ Page({
     this.lastAcceptedNoteText = '';
     this.lastLineLimitToastAt = 0;
     this.ensureReminderDraft();
-    this.refreshPage();
+    void this.refreshPage();
   },
 
   onUnload() {
@@ -59,11 +67,11 @@ Page({
   },
 
   onShow() {
-    this.refreshPage();
+    void this.refreshPage();
   },
 
-  onPullDownRefresh() {
-    this.refreshPage();
+  async onPullDownRefresh() {
+    await this.refreshPage();
     wx.stopPullDownRefresh();
   },
 
@@ -79,9 +87,19 @@ Page({
     });
   },
 
-  refreshPage() {
+  async refreshPage(options) {
+    const settings = options || {};
+    if (settings.sync !== false && store.isSignedInToCloud()) {
+      try {
+        await store.syncNow();
+      } catch (_) {
+        // Keep local usage available even when cloud sync fails.
+      }
+    }
+
     this.setData({
       stats: store.getStats(),
+      cloudStatus: store.getCloudStatus(),
     });
     this.updatePreview();
   },
@@ -424,6 +442,12 @@ Page({
         ? '文字和现场照片都已保存到本机时间线。'
         : '记录已保存到本机时间线。';
 
+      if (result.entry && result.entry.cloudTracked) {
+        feedbackMessage = savedPhotoPath
+          ? '记录、照片都已保存，并已加入云同步队列。'
+          : '记录已保存，并已加入云同步队列。';
+      }
+
       if (result.task && result.task.status === 'overdue') {
         feedbackMessage = savedPhotoPath
           ? '记录、照片都已保存，提醒时间已经过去，已自动放进逾期待办。'
@@ -452,6 +476,7 @@ Page({
         feedbackMessage,
         photoTempPath: '',
         stats: store.getStats(),
+        cloudStatus: store.getCloudStatus(),
       });
 
       wx.showToast({
@@ -530,6 +555,31 @@ Page({
 
       this.setData({
         feedbackMessage: `${baseLabel}，但写入手机日历失败了。`,
+      });
+    }
+  },
+
+  async handleCloudPrimaryAction() {
+    if (!store.isCloudConfigured()) {
+      return;
+    }
+
+    try {
+      if (store.isSignedInToCloud()) {
+        await store.syncNow();
+      } else {
+        await store.signInToCloud();
+      }
+      await this.refreshPage({
+        sync: false,
+      });
+    } catch (error) {
+      await this.refreshPage({
+        sync: false,
+      });
+      wx.showToast({
+        title: (error && error.message) || '云同步失败，请稍后再试',
+        icon: 'none',
       });
     }
   },

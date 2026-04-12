@@ -20,163 +20,169 @@ class TimelineScreen extends StatelessWidget {
     final isCompact = MediaQuery.sizeOf(context).width < 380;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ScreenSectionCard(
-              margin: EdgeInsets.zero,
-              backgroundColor: AppColors.hero,
-              borderColor: AppColors.borderDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'TIMELINE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 2,
-                      color: Color(0xFF6D674F),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '巡田时间线',
-                    style: TextStyle(
-                      fontSize: isCompact ? 24 : 26,
-                      height: 1.25,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textHero,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFE8D8),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '共 ${entries.length} 条',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF5F5843),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (entries.isEmpty)
-              const ScreenSectionCard(
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      '时间线还是空的',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      '先去“记录”页写下第一条巡田观察，这里就会自动出现。',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ...groups.map(
-              (group) => Container(
-                margin: const EdgeInsets.only(top: 20),
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE7E0CF),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFD0C5AB)),
-                ),
+      child: RefreshIndicator(
+        onRefresh: controller.isSignedIn ? controller.syncNow : () async {},
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              ScreenSectionCard(
+                margin: EdgeInsets.zero,
+                backgroundColor: AppColors.hero,
+                borderColor: AppColors.borderDark,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  group.dayLabel,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF4D4938),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  group.dayCaption,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF756F5D),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4F0E6),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFD9CFB8)),
-                          ),
-                          child: Text(
-                            group.countLabel,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF635D49),
-                            ),
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      'TIMELINE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 2,
+                        color: Color(0xFF6D674F),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    ...group.entries.map(
-                      (entry) => _TimelineCard(
-                        entry: entry,
-                        onOpenTask: entry.task == null
-                            ? null
-                            : () => controller.goToTasks(
-                                focusTaskId: entry.task!.id,
-                              ),
-                        onDelete: () => _confirmDelete(context, entry),
+                    const SizedBox(height: 12),
+                    Text(
+                      '巡田时间线',
+                      style: TextStyle(
+                        fontSize: isCompact ? 24 : 26,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textHero,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFE8D8),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '共 ${entries.length} 条',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF5F5843),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              if (entries.isEmpty)
+                const ScreenSectionCard(
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        '时间线还是空的',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        '先去“记录”页写下第一条巡田观察，这里就会自动出现。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.7,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ...groups.map(
+                (group) => Container(
+                  margin: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE7E0CF),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFD0C5AB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    group.dayLabel,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF4D4938),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    group.dayCaption,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF756F5D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F0E6),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: const Color(0xFFD9CFB8),
+                              ),
+                            ),
+                            child: Text(
+                              group.countLabel,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF635D49),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      ...group.entries.map(
+                        (entry) => _TimelineCard(
+                          entry: entry,
+                          onOpenTask: entry.task == null
+                              ? null
+                              : () => controller.goToTasks(
+                                  focusTaskId: entry.task!.id,
+                                ),
+                          onDelete: () => _confirmDelete(context, entry),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -299,13 +305,15 @@ class _TimelineCard extends StatelessWidget {
                       height: 1.7,
                     ),
                   ),
-                  if (entry.entry.photoDataUri.isNotEmpty) ...<Widget>[
+                  if (entry.entry.localPhotoPath.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: () =>
-                          _showPhotoPreview(context, entry.entry.photoDataUri),
+                      onTap: () => _showPhotoPreview(
+                        context,
+                        entry.entry.localPhotoPath,
+                      ),
                       child: StoredPhoto(
-                        dataUri: entry.entry.photoDataUri,
+                        source: entry.entry.localPhotoPath,
                         width: 220,
                         height: 164,
                       ),
@@ -351,14 +359,14 @@ class _TimelineCard extends StatelessWidget {
     return '${farmer_date.pad(date.hour)}:${farmer_date.pad(date.minute)}';
   }
 
-  void _showPhotoPreview(BuildContext context, String dataUri) {
+  void _showPhotoPreview(BuildContext context, String source) {
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: InteractiveViewer(
           child: StoredPhoto(
-            dataUri: dataUri,
+            source: source,
             fit: BoxFit.contain,
             borderRadius: BorderRadius.circular(24),
           ),
