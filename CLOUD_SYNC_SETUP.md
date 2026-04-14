@@ -84,11 +84,42 @@ supabase functions serve --env-file supabase/.env.local
 
 ### 正式项目部署
 
+先复制生产模板：
+
+```bash
+cp /Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production.example \
+   /Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production
+```
+
+然后把真实值填进去。准备好之后，推荐直接用仓库里的部署脚本：
+
+```bash
+cd /Users/wzp/Documents/GitHub/FarmerNote1
+./scripts/deploy_supabase_prod.sh <your-project-ref> supabase/.env.production
+```
+
+这个脚本会自动完成：
+
+- `supabase link`
+- `supabase secrets set`
+- `supabase db push`
+- 正式环境需要的 Edge Functions 发布
+
+默认不会发布 `auth-dev-login`。只有在你明确设置：
+
+```bash
+DEPLOY_DEV_LOGIN=true ./scripts/deploy_supabase_prod.sh <your-project-ref> supabase/.env.production
+```
+
+时，才会一起发布临时联调登录函数。
+
+如果你想手动执行，也可以继续用下面这组命令：
+
 ```bash
 supabase link --project-ref <your-project-ref>
+supabase secrets set --env-file supabase/.env.production
 supabase db push
 supabase functions deploy auth-wechat-login --no-verify-jwt
-supabase functions deploy auth-dev-login --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
@@ -101,6 +132,7 @@ supabase functions deploy media-download-ticket --no-verify-jwt
 - `entry-photos` bucket 已存在且为私有
 - Edge Function 环境变量已写入
 - 数据库 migration 已执行成功
+- `FARMERNOTE_ENABLE_DEV_LOGIN=false`
 
 ## 3. 配置 Flutter
 

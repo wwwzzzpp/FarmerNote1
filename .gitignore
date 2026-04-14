@@ -33,6 +33,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+supabase/.env.production
 Flutter/apps/farmernote_app/dart_defines.local.json
 supabase/.temp/
 supabase/.branches/

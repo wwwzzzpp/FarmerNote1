@@ -58,6 +58,10 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 [`/Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.local.example`](/Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.local.example)
 
+正式环境模板：
+
+[`/Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production.example`](/Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production.example)
+
 ## 本地初始化
 
 如果本机已安装 Supabase CLI，可以在仓库根目录执行：
@@ -96,10 +100,37 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 1. 在 Supabase 控制台创建项目
 2. 配置 Storage bucket：`entry-photos`
-3. 写入上述环境变量
-4. 执行 migration
-5. 部署 Edge Functions
-6. 把函数基础地址配置到小程序和 Flutter 客户端
+3. 复制生产模板并填写真实值
+4. 写入上述环境变量
+5. 执行 migration
+6. 部署 Edge Functions
+7. 把函数基础地址配置到小程序和 Flutter 客户端
+
+推荐使用仓库脚本：
+
+```bash
+cp /Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production.example \
+   /Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.production
+
+cd /Users/wzp/Documents/GitHub/FarmerNote1
+./scripts/deploy_supabase_prod.sh <your-project-ref> supabase/.env.production
+```
+
+这个脚本默认不会把 `auth-dev-login` 部署到正式环境。
+
+如果你坚持手动执行，流程是：
+
+```bash
+supabase link --project-ref <your-project-ref>
+supabase secrets set --env-file supabase/.env.production
+supabase db push
+supabase functions deploy auth-wechat-login --no-verify-jwt
+supabase functions deploy auth-refresh --no-verify-jwt
+supabase functions deploy sync-push --no-verify-jwt
+supabase functions deploy sync-pull --no-verify-jwt
+supabase functions deploy media-upload-ticket --no-verify-jwt
+supabase functions deploy media-download-ticket --no-verify-jwt
+```
 
 ### Flutter 客户端
 
