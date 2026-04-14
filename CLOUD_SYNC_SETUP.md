@@ -44,6 +44,23 @@ cp supabase/.env.local.example supabase/.env.local
 
 把 [supabase/.env.local.example](/Users/wzp/Documents/GitHub/FarmerNote1/supabase/.env.local.example) 里的占位值替换成真实值。
 
+如果你在真机上调试本地 Supabase，记得把：
+
+```text
+FARMERNOTE_PUBLIC_SUPABASE_URL=http://你的电脑局域网IP:54321
+```
+
+也一起写进去。这样图片上传票据就不会错误地回到 `127.0.0.1`。
+
+如果你还在等微信公众平台或开放平台认证，可以先打开临时联调登录：
+
+```text
+FARMERNOTE_ENABLE_DEV_LOGIN=true
+FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
+```
+
+这会启用一个仅用于开发联调的 `auth-dev-login`。小程序和 Flutter 只要使用同一个 `debug key`，就会同步到同一个 Supabase 测试用户。
+
 ### 本地启动
 
 ```bash
@@ -58,6 +75,7 @@ supabase functions serve --env-file supabase/.env.local
 supabase link --project-ref <your-project-ref>
 supabase db push
 supabase functions deploy auth-wechat-login --no-verify-jwt
+supabase functions deploy auth-dev-login --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
@@ -87,6 +105,12 @@ cp /Users/wzp/Documents/GitHub/FarmerNote1/Flutter/apps/farmernote_app/dart_defi
 - `FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL`
 - `FARMERNOTE_FLUTTER_WECHAT_APP_ID`
 - `FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK`
+
+如果要先用临时联调登录，再补这 3 个值：
+
+- `FARMERNOTE_ENABLE_DEV_LOGIN=true`
+- `FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user`
+- `FARMERNOTE_DEV_LOGIN_DISPLAY_NAME=FarmerNote 临时联调`
 
 运行 Android：
 
@@ -156,6 +180,15 @@ https://your-project-ref.supabase.co
 5. Flutter 下拉刷新后，确认记录、图片、待办都出现。
 6. Flutter 完成待办，再回到小程序下拉刷新，确认状态变成“已完成”。
 7. Flutter 删除记录，再回到小程序下拉刷新，确认时间线和待办一起消失。
+
+如果你现在还不能走真实微信登录，就改成这组本地验证：
+
+1. 启动 `supabase start`
+2. 执行 `supabase db reset`
+3. 启动 `supabase functions serve --env-file supabase/.env.local`
+4. 小程序点击“临时登录”，创建一条“文字 + 图片 + 待办”的新记录
+5. Flutter 用同一个 `dart_defines.local.json` 点击“临时登录”
+6. Flutter 下拉刷新，确认记录、图片、待办都同步过来
 
 ## 6. 这次接入里最容易卡住的点
 

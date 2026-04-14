@@ -70,6 +70,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   bool get isSyncing => _isSyncing;
   bool get isAuthenticating => _isAuthenticating;
   bool get isCloudConfigured => CloudConfig.isSupabaseConfigured;
+  bool get isDevLoginEnabled => CloudConfig.isDevLoginEnabled;
   bool get isSignedIn => _authSession != null;
   int get selectedTabIndex => _selectedTabIndex;
   String get focusTaskId => _focusTaskId;
@@ -86,7 +87,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     if (isSignedIn) {
       return pendingCloudChangeCount > 0 ? '立即同步' : '检查云端更新';
     }
-    return '微信登录';
+    return isDevLoginEnabled ? '临时登录' : '微信登录';
   }
 
   String get cloudStatusHeadline {
@@ -94,7 +95,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       return '当前还没接入云端环境';
     }
     if (_isAuthenticating) {
-      return '正在通过微信登录云端';
+      return isDevLoginEnabled ? '正在接入临时联调账号' : '正在通过微信登录云端';
     }
     if (_isSyncing) {
       return '正在同步 FarmerNote 云端数据';
@@ -103,18 +104,20 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       final displayName = _authSession!.userProfile.displayName.trim();
       return displayName.isEmpty ? '已登录云端账号' : '已登录 $displayName';
     }
-    return '当前处于本机模式';
+    return isDevLoginEnabled ? '当前可用临时联调登录' : '当前处于本机模式';
   }
 
   String get cloudStatusDetail {
     if (!isCloudConfigured) {
-      return '先配置 Supabase Functions 地址和 Flutter 微信登录参数，之后多端数据才能互通。';
+      return '先配置 Supabase Functions 地址，之后多端数据才能互通。';
     }
     if (_cloudError.isNotEmpty) {
       return _cloudError;
     }
     if (!isSignedIn) {
-      return '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
+      return isDevLoginEnabled
+          ? '当前会走临时联调账号登录。只要小程序和 Flutter 使用同一个 debug key，就会同步到同一个 Supabase 测试用户。'
+          : '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
     }
     if (pendingCloudChangeCount > 0) {
       return '还有 $pendingCloudChangeCount 条新变更待上传。当前版本只同步新版产生的数据，不会自动迁移旧本地记录。';
@@ -419,7 +422,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     try {
-      final session = await _authService.signInWithWeChat();
+      final session = isDevLoginEnabled
+          ? await _authService.signInWithDevLogin()
+          : await _authService.signInWithWeChat();
       await _applyState(
         _currentState.copyWith(authSession: session),
         shouldNotify: false,

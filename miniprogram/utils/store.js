@@ -581,11 +581,13 @@ function getCloudStatus() {
   if (!cloudConfig.isConfigured()) {
     headline = '当前还没接入云端环境';
   } else if (signInInFlight) {
-    headline = '正在通过微信登录云端';
+    headline = cloudConfig.isDevLoginEnabled() ? '正在接入临时联调账号' : '正在通过微信登录云端';
   } else if (syncInFlight) {
     headline = '正在同步 FarmerNote 云端数据';
   } else if (isSignedIn) {
     headline = displayName ? `已登录 ${displayName}` : '已登录云端账号';
+  } else if (cloudConfig.isDevLoginEnabled()) {
+    headline = '当前可用临时联调登录';
   }
 
   let detail = '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
@@ -593,6 +595,9 @@ function getCloudStatus() {
     detail = '先在 cloud-config.js 里配置 Supabase Functions 地址，再去微信后台补上合法 request 域名。';
   } else if (lastSyncError) {
     detail = lastSyncError;
+  } else if (!isSignedIn && cloudConfig.isDevLoginEnabled()) {
+    detail =
+      '当前会走临时联调账号登录。只要小程序和 Flutter 使用同一个 debug key，就会同步到同一个 Supabase 测试用户。';
   } else if (isSignedIn && state.pendingMutations.length > 0) {
     detail = `还有 ${state.pendingMutations.length} 条新变更待上传。当前版本只同步登录后产生的新数据，不会自动迁移旧本地记录。`;
   } else if (isSignedIn && lastSyncAt) {
@@ -605,7 +610,11 @@ function getCloudStatus() {
     isConfigured: cloudConfig.isConfigured(),
     isSignedIn,
     isBusy: !!syncInFlight || !!signInInFlight,
-    actionLabel: isSignedIn ? (state.pendingMutations.length > 0 ? '立即同步' : '检查云端更新') : '微信登录',
+    actionLabel: isSignedIn
+      ? (state.pendingMutations.length > 0 ? '立即同步' : '检查云端更新')
+      : cloudConfig.isDevLoginEnabled()
+      ? '临时登录'
+      : '微信登录',
     headline,
     detail,
   };
@@ -617,7 +626,9 @@ async function signInToCloud() {
   }
 
   signInInFlight = (async () => {
-    const session = await cloudAuth.loginWithWeChat();
+    const session = cloudConfig.isDevLoginEnabled()
+      ? await cloudAuth.loginForDevelopment()
+      : await cloudAuth.loginWithWeChat();
     const state = loadState();
     persistState({
       ...state,

@@ -33,6 +33,9 @@ yarn-error.*
 
 # local env files
 .env*.local
+Flutter/apps/farmernote_app/dart_defines.local.json
+supabase/.temp/
+supabase/.branches/
 
 # typescript
 *.tsbuildinfo

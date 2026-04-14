@@ -115,7 +115,7 @@ flutter devices
 
 - 创建 Supabase 项目
 - 执行 `supabase/migrations/202604130001_cloud_sync.sql`
-- 部署 6 个 Edge Functions
+- 部署 7 个 Edge Functions
 - 配置 `entry-photos` 私有 bucket
 - 写入微信和 Supabase 的服务端环境变量
 
@@ -154,6 +154,25 @@ cp dart_defines.example.json dart_defines.local.json
 flutter run -d <device-id> --dart-define-from-file=dart_defines.local.json
 ```
 
+如果你现在只是要先验证 Supabase 同步，不等微信认证，也可以先打开临时联调登录：
+
+```bash
+flutter run -d <device-id> --dart-define-from-file=dart_defines.local.json
+```
+
+其中 `dart_defines.local.json` 至少要包含：
+
+```json
+{
+  "FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL": "http://你的电脑局域网IP:54321/functions/v1",
+  "FARMERNOTE_ENABLE_DEV_LOGIN": "true",
+  "FARMERNOTE_DEV_LOGIN_KEY": "farmernote-local-shared-user",
+  "FARMERNOTE_DEV_LOGIN_DISPLAY_NAME": "FarmerNote 临时联调"
+}
+```
+
+这样首页云端卡片会显示“临时登录”，点一下就能接到同一个 Supabase 测试用户。
+
 ### 3. 配置小程序
 
 小程序端的云地址在：
@@ -171,6 +190,8 @@ const SUPABASE_FUNCTIONS_BASE_URL = '';
 ```js
 const SUPABASE_FUNCTIONS_BASE_URL = 'https://<project-ref>.supabase.co/functions/v1';
 ```
+
+如果你当前走的是本地联调，可以先保留本机局域网地址，并让 `ENABLE_DEV_LOGIN` 打开。只要小程序和 Flutter 用的是同一个 `DEV_LOGIN_KEY`，两端就会同步到同一个临时测试账号。
 
 然后去微信公众平台后台补上合法域名：
 

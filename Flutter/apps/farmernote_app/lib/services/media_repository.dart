@@ -111,7 +111,11 @@ class MediaRepository {
     );
 
     if (uploadResponse.statusCode < 200 || uploadResponse.statusCode >= 300) {
-      throw const MediaRepositoryException('upload_failed', '上传图片到云端失败。');
+      final responseBody = uploadResponse.body.trim();
+      final detail = responseBody.isEmpty
+          ? '状态码 ${uploadResponse.statusCode}'
+          : '状态码 ${uploadResponse.statusCode}，响应：$responseBody';
+      throw MediaRepositoryException('upload_failed', '上传图片到云端失败，$detail');
     }
 
     return objectPath;
@@ -161,7 +165,11 @@ class MediaRepository {
     final downloadResponse = await _client.get(Uri.parse(resolvedUrl));
     if (downloadResponse.statusCode < 200 ||
         downloadResponse.statusCode >= 300) {
-      throw const MediaRepositoryException('download_failed', '下载云端图片失败。');
+      final responseBody = downloadResponse.body.trim();
+      final detail = responseBody.isEmpty
+          ? '状态码 ${downloadResponse.statusCode}'
+          : '状态码 ${downloadResponse.statusCode}，响应：$responseBody';
+      throw MediaRepositoryException('download_failed', '下载云端图片失败，$detail');
     }
 
     await targetFile.parent.create(recursive: true);

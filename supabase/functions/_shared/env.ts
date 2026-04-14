@@ -7,7 +7,7 @@ export function getEnv(name: string): string {
 }
 
 export function getOptionalEnv(name: string): string {
-  return Deno.env.get(name)?.trim() ?? '';
+  return Deno.env.get(name)?.trim() ?? "";
 }
 
 export function getNumberEnv(name: string, fallback: number): number {
@@ -18,4 +18,21 @@ export function getNumberEnv(name: string, fallback: number): number {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getBooleanEnv(name: string, fallback: boolean): boolean {
+  const value = Deno.env.get(name)?.trim().toLowerCase();
+  if (!value) {
+    return fallback;
+  }
+
+  if (value === "true" || value === "1" || value === "yes" || value === "on") {
+    return true;
+  }
+
+  if (value === "false" || value === "0" || value === "no" || value === "off") {
+    return false;
+  }
+
+  return fallback;
 }

@@ -79,6 +79,32 @@ class AuthService {
     );
   }
 
+  Future<AuthSession> signInWithDevLogin() async {
+    if (!CloudConfig.isSupabaseConfigured) {
+      throw const AuthServiceException(
+        'cloud_not_configured',
+        '还没配置 Supabase Functions 地址，请先补上 dart-define。',
+      );
+    }
+
+    if (!CloudConfig.isDevLoginEnabled) {
+      throw const AuthServiceException(
+        'dev_login_not_enabled',
+        '当前构建还没打开临时联调登录。',
+      );
+    }
+
+    return _postAuth(
+      endpoint: 'auth-dev-login',
+      body: <String, dynamic>{
+        'platform': 'flutter_app',
+        'debugUserKey': CloudConfig.devLoginKey,
+        'displayName': CloudConfig.devLoginDisplayName,
+        'deviceId': await _ensureDeviceId(),
+      },
+    );
+  }
+
   Future<AuthSession> refreshSession(AuthSession session) {
     return _postAuth(
       endpoint: 'auth-refresh',

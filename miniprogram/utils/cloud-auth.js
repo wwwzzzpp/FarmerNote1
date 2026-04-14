@@ -45,6 +45,37 @@ async function loginWithWeChat() {
   return parseSession(session);
 }
 
+async function loginForDevelopment() {
+  if (!cloudConfig.isConfigured()) {
+    throw requestUtils.buildError(
+      'cloud_not_configured',
+      '还没配置小程序云端地址，请先补上 cloud-config.js。'
+    );
+  }
+
+  if (!cloudConfig.isDevLoginEnabled()) {
+    throw requestUtils.buildError(
+      'dev_login_not_enabled',
+      '当前小程序还没打开临时联调登录。'
+    );
+  }
+
+  const session = await requestUtils.requestJson({
+    url: cloudConfig.getFunctionUrl('auth-dev-login'),
+    method: 'POST',
+    data: {
+      platform: 'mini_program',
+      debugUserKey: cloudConfig.getDevLoginKey(),
+      displayName: cloudConfig.getDevLoginDisplayName(),
+    },
+    header: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return parseSession(session);
+}
+
 async function refreshSession(session) {
   const nextSession = await requestUtils.requestJson({
     url: cloudConfig.getFunctionUrl('auth-refresh'),
@@ -70,6 +101,7 @@ function shouldRefreshSession(session) {
 }
 
 module.exports = {
+  loginForDevelopment,
   loginWithWeChat,
   refreshSession,
   shouldRefreshSession,

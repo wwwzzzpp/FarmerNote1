@@ -15,6 +15,7 @@ supabase/
   migrations/
   functions/
     _shared/
+    auth-dev-login/
     auth-wechat-login/
     auth-refresh/
     sync-push/
@@ -36,6 +37,8 @@ WECHAT_OPEN_APP_ID
 WECHAT_OPEN_APP_SECRET
 FARMERNOTE_ACCESS_TOKEN_TTL_SECONDS
 FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS
+FARMERNOTE_ENABLE_DEV_LOGIN
+FARMERNOTE_DEV_LOGIN_KEY
 ```
 
 推荐默认值：
@@ -43,6 +46,8 @@ FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS
 ```text
 FARMERNOTE_ACCESS_TOKEN_TTL_SECONDS=86400
 FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS=2592000
+FARMERNOTE_ENABLE_DEV_LOGIN=false
+FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 ```
 
 本地模板文件已经放好：
@@ -58,6 +63,15 @@ supabase start
 supabase db reset
 supabase functions serve --env-file supabase/.env.local
 ```
+
+如果你还在等微信认证，可以临时打开本地联调登录：
+
+```text
+FARMERNOTE_ENABLE_DEV_LOGIN=true
+FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
+```
+
+这样小程序和 Flutter 只要使用同一个 `debug key`，就会落到同一个 Supabase 测试账号上。
 
 ## 部署步骤
 
@@ -101,6 +115,7 @@ https://<project-ref>.supabase.co
 客户端不会直连数据库。所有请求都走 Edge Functions。
 
 - 登录：`auth-wechat-login`
+- 临时联调登录：`auth-dev-login`
 - 刷新令牌：`auth-refresh`
 - 数据 push：`sync-push`
 - 数据 pull：`sync-pull`

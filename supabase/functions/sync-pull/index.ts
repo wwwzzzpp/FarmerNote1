@@ -37,12 +37,14 @@ function buildNextSyncedVersion(input: {
   // overall max can skip unseen rows from the slower table. We therefore advance
   // to the smallest "frontier" among the saturated streams and tolerate
   // duplicate rows on the next pull.
-  const saturatedFrontiers = [entryHitLimit ? entryMax : null, taskHitLimit ? taskMax : null]
-    .where((value): value is number => value != null);
-  if (saturatedFrontiers.isNotEmpty) {
+  const saturatedFrontiers = [
+    entryHitLimit ? entryMax : null,
+    taskHitLimit ? taskMax : null,
+  ].filter((value): value is number => value != null);
+  if (saturatedFrontiers.length > 0) {
     return saturatedFrontiers.reduce(
-      (min, value) => value < min ? value : min,
-      saturatedFrontiers.first,
+      (min: number, value: number) => value < min ? value : min,
+      saturatedFrontiers[0],
     );
   }
 
