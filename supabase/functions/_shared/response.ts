@@ -1,4 +1,4 @@
-import { corsHeaders } from './cors.ts';
+import { corsHeaders } from "./cors.ts";
 
 export function jsonResponse(
   body: unknown,
@@ -8,7 +8,7 @@ export function jsonResponse(
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
+      "Content-Type": "application/json; charset=utf-8",
       ...corsHeaders,
       ...headers,
     },
@@ -18,8 +18,9 @@ export function jsonResponse(
 export function errorResponse(
   message: string,
   status = 400,
-  code = 'bad_request',
+  code = "bad_request",
   details?: unknown,
+  headers: Record<string, string> = {},
 ): Response {
   return jsonResponse(
     {
@@ -30,6 +31,7 @@ export function errorResponse(
       },
     },
     status,
+    headers,
   );
 }
 

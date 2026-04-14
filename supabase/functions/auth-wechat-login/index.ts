@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createSession, ensureFarmerUser } from "../_shared/auth.ts";
+import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
 import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
 import { exchangeWeChatCode } from "../_shared/wechat.ts";
 
@@ -19,6 +20,14 @@ Deno.serve(async (request) => {
   }
 
   try {
+    const limited = await enforceIpRateLimit({
+      endpoint: "auth-wechat-login",
+      request,
+    });
+    if (limited) {
+      return limited;
+    }
+
     const body = await readJson<AuthLoginRequest>(request);
     if (
       !body ||

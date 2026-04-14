@@ -1,7 +1,8 @@
-import { corsHeaders } from '../_shared/cors.ts';
-import { requireSession } from '../_shared/auth.ts';
-import { createServiceClient } from '../_shared/supabase.ts';
-import { errorResponse, jsonResponse, readJson } from '../_shared/response.ts';
+import { corsHeaders } from "../_shared/cors.ts";
+import { requireSession } from "../_shared/auth.ts";
+import { enforceUserRateLimit } from "../_shared/rate-limit.ts";
+import { createServiceClient } from "../_shared/supabase.ts";
+import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
 
 interface SyncPullRequest {
   lastSyncedVersion?: number;
@@ -52,29 +53,37 @@ function buildNextSyncedVersion(input: {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (request.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  if (request.method !== 'POST') {
-    return errorResponse('Method not allowed.', 405, 'method_not_allowed');
+  if (request.method !== "POST") {
+    return errorResponse("Method not allowed.", 405, "method_not_allowed");
   }
 
   try {
     const session = await requireSession(request);
+    const limited = await enforceUserRateLimit({
+      endpoint: "sync-pull",
+      session,
+    });
+    if (limited) {
+      return limited;
+    }
+
     const body = await readJson<SyncPullRequest>(request);
     const lastSyncedVersion = Number(body?.lastSyncedVersion ?? 0);
     const limit = normalizeLimit(body?.limit);
     const client = createServiceClient();
 
     const { data: entries, error: entryError } = await client
-      .from('entries')
+      .from("entries")
       .select(
-        'id, note_text, photo_object_path, source_platform, created_at, updated_at, client_updated_at, deleted_at, sync_version',
+        "id, note_text, photo_object_path, source_platform, created_at, updated_at, client_updated_at, deleted_at, sync_version",
       )
-      .eq('user_id', session.userId)
-      .gt('sync_version', lastSyncedVersion)
-      .order('sync_version', { ascending: true })
+      .eq("user_id", session.userId)
+      .gt("sync_version", lastSyncedVersion)
+      .order("sync_version", { ascending: true })
       .limit(limit);
 
     if (entryError) {
@@ -82,13 +91,13 @@ Deno.serve(async (request) => {
     }
 
     const { data: tasks, error: taskError } = await client
-      .from('tasks')
+      .from("tasks")
       .select(
-        'id, entry_id, due_at, status, completed_at, created_at, updated_at, client_updated_at, deleted_at, sync_version',
+        "id, entry_id, due_at, status, completed_at, created_at, updated_at, client_updated_at, deleted_at, sync_version",
       )
-      .eq('user_id', session.userId)
-      .gt('sync_version', lastSyncedVersion)
-      .order('sync_version', { ascending: true })
+      .eq("user_id", session.userId)
+      .gt("sync_version", lastSyncedVersion)
+      .order("sync_version", { ascending: true })
       .limit(limit);
 
     if (taskError) {
@@ -98,7 +107,7 @@ Deno.serve(async (request) => {
     const entryList = (entries ?? []).map((entry) => ({
       id: entry.id,
       noteText: entry.note_text,
-      photoObjectPath: entry.photo_object_path ?? '',
+      photoObjectPath: entry.photo_object_path ?? "",
       sourcePlatform: entry.source_platform,
       createdAt: entry.created_at,
       updatedAt: entry.updated_at,
@@ -135,9 +144,9 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : 'Sync pull failed.',
+      error instanceof Error ? error.message : "Sync pull failed.",
       400,
-      'sync_pull_failed',
+      "sync_pull_failed",
     );
   }
 });

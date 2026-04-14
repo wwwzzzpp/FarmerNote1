@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireSession } from "../_shared/auth.ts";
+import { enforceUserRateLimit } from "../_shared/rate-limit.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 import { getEnv, getOptionalEnv } from "../_shared/env.ts";
 import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
@@ -54,6 +55,14 @@ Deno.serve(async (request) => {
 
   try {
     const session = await requireSession(request);
+    const limited = await enforceUserRateLimit({
+      endpoint: "media-download-ticket",
+      session,
+    });
+    if (limited) {
+      return limited;
+    }
+
     const body = await readJson<DownloadTicketRequest>(request);
     const objectPath = String(body?.objectPath ?? "").trim();
     if (!objectPath) {

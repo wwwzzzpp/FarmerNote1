@@ -61,6 +61,19 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 这会启用一个仅用于开发联调的 `auth-dev-login`。小程序和 Flutter 只要使用同一个 `debug key`，就会同步到同一个 Supabase 测试用户。
 
+如果你要调整接口防刷阈值，也可以在这里改：
+
+```text
+FARMERNOTE_USER_RATE_LIMIT_PER_MINUTE=30
+FARMERNOTE_IP_RATE_LIMIT_PER_MINUTE=30
+```
+
+当前默认策略是：
+
+- 已登录接口：按用户限流
+- 登录/刷新接口：按 IP 限流
+- 每分钟每个接口默认最多 30 次请求
+
 ### 本地启动
 
 ```bash
