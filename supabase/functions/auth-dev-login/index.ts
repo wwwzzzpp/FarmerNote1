@@ -2,7 +2,12 @@ import { createSession, ensureFarmerUser } from "../_shared/auth.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { getBooleanEnv, getOptionalEnv } from "../_shared/env.ts";
 import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
-import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
+import {
+  errorMessage,
+  errorResponse,
+  jsonResponse,
+  readJson,
+} from "../_shared/response.ts";
 
 interface AuthDevLoginRequest {
   platform: "mini_program" | "flutter_app";
@@ -92,7 +97,7 @@ Deno.serve(async (request) => {
     return jsonResponse(session);
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Dev login failed.",
+      errorMessage(error, "Dev login failed."),
       400,
       "dev_login_failed",
     );

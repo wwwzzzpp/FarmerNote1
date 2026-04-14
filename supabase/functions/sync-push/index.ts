@@ -2,7 +2,12 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { requireSession } from "../_shared/auth.ts";
 import { enforceUserRateLimit } from "../_shared/rate-limit.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
-import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
+import {
+  errorMessage,
+  errorResponse,
+  jsonResponse,
+  readJson,
+} from "../_shared/response.ts";
 
 type MutationEntity = "entry" | "task";
 type MutationOperation = "upsert" | "delete";
@@ -207,7 +212,7 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Sync push failed.",
+      errorMessage(error, "Sync push failed."),
       400,
       "sync_push_failed",
     );

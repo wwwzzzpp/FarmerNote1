@@ -100,7 +100,32 @@ function shouldRefreshSession(session) {
   return Number.isFinite(refreshAt) && refreshAt <= Date.now() + 5 * 60 * 1000;
 }
 
+function isSessionInvalidError(error) {
+  const statusCode = Number(
+    (error && error.statusCode) ||
+      (error && error.originalError && error.originalError.statusCode) ||
+      0
+  );
+  if (statusCode === 401) {
+    return true;
+  }
+
+  const code = String((error && error.code) || '').trim().toLowerCase();
+  if (code === 'session_invalid') {
+    return true;
+  }
+
+  const message = String((error && error.message) || '').trim().toLowerCase();
+  return (
+    message.indexOf('invalid access token') >= 0 ||
+    message.indexOf('access token expired') >= 0 ||
+    message.indexOf('invalid refresh token') >= 0 ||
+    message.indexOf('refresh token expired') >= 0
+  );
+}
+
 module.exports = {
+  isSessionInvalidError,
   loginForDevelopment,
   loginWithWeChat,
   refreshSession,

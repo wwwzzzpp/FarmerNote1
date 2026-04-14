@@ -84,29 +84,29 @@ begin
     v_request_count := 1;
     v_allowed := true;
   else
-    update public.farmer_request_rate_limits
+    update public.farmer_request_rate_limits as limits
     set
-      request_count = request_count + 1,
+      request_count = limits.request_count + 1,
       updated_at = v_now
     where
-      scope_type = v_scope_type
-      and scope_key = v_scope_key
-      and endpoint = v_endpoint
-      and window_started_at = v_window_started_at
-      and request_count < v_limit
-    returning public.farmer_request_rate_limits.request_count
+      limits.scope_type = v_scope_type
+      and limits.scope_key = v_scope_key
+      and limits.endpoint = v_endpoint
+      and limits.window_started_at = v_window_started_at
+      and limits.request_count < v_limit
+    returning limits.request_count
     into v_request_count;
 
     if v_request_count is null then
       v_allowed := false;
-      select public.farmer_request_rate_limits.request_count
+      select limits.request_count
       into v_request_count
-      from public.farmer_request_rate_limits
+      from public.farmer_request_rate_limits as limits
       where
-        scope_type = v_scope_type
-        and scope_key = v_scope_key
-        and endpoint = v_endpoint
-        and window_started_at = v_window_started_at;
+        limits.scope_type = v_scope_type
+        and limits.scope_key = v_scope_key
+        and limits.endpoint = v_endpoint
+        and limits.window_started_at = v_window_started_at;
     else
       v_allowed := true;
     end if;

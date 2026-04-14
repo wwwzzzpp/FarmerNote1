@@ -9,10 +9,11 @@ import '../config/cloud_config.dart';
 import '../models/auth_session.dart';
 
 class MediaRepositoryException implements Exception {
-  const MediaRepositoryException(this.code, this.message);
+  const MediaRepositoryException(this.code, this.message, {this.statusCode});
 
   final String code;
   final String message;
+  final int? statusCode;
 
   @override
   String toString() => 'MediaRepositoryException($code, $message)';
@@ -89,9 +90,15 @@ class MediaRepository {
 
     final ticketPayload = _decodeResponse(ticketResponse);
     if (ticketResponse.statusCode < 200 || ticketResponse.statusCode >= 300) {
+      final errorInfo = _readErrorInfo(
+        ticketPayload,
+        fallbackCode: 'upload_ticket_failed',
+        fallbackMessage: '创建图片上传票据失败。',
+      );
       throw MediaRepositoryException(
-        (ticketPayload['code'] ?? 'upload_ticket_failed').toString(),
-        (ticketPayload['message'] ?? '创建图片上传票据失败。').toString(),
+        errorInfo.code,
+        errorInfo.message,
+        statusCode: ticketResponse.statusCode,
       );
     }
 
@@ -145,9 +152,15 @@ class MediaRepository {
 
     final ticketPayload = _decodeResponse(ticketResponse);
     if (ticketResponse.statusCode < 200 || ticketResponse.statusCode >= 300) {
+      final errorInfo = _readErrorInfo(
+        ticketPayload,
+        fallbackCode: 'download_ticket_failed',
+        fallbackMessage: '创建图片下载票据失败。',
+      );
       throw MediaRepositoryException(
-        (ticketPayload['code'] ?? 'download_ticket_failed').toString(),
-        (ticketPayload['message'] ?? '创建图片下载票据失败。').toString(),
+        errorInfo.code,
+        errorInfo.message,
+        statusCode: ticketResponse.statusCode,
       );
     }
 
@@ -197,6 +210,32 @@ class MediaRepository {
       return decoded.cast<String, dynamic>();
     }
     return <String, dynamic>{};
+  }
+
+  ({String code, String message}) _readErrorInfo(
+    Map<String, dynamic> payload, {
+    required String fallbackCode,
+    required String fallbackMessage,
+  }) {
+    final nestedError = payload['error'];
+    if (nestedError is Map<String, dynamic>) {
+      return (
+        code: (nestedError['code'] ?? fallbackCode).toString(),
+        message: (nestedError['message'] ?? fallbackMessage).toString(),
+      );
+    }
+    if (nestedError is Map) {
+      final casted = nestedError.cast<String, dynamic>();
+      return (
+        code: (casted['code'] ?? fallbackCode).toString(),
+        message: (casted['message'] ?? fallbackMessage).toString(),
+      );
+    }
+
+    return (
+      code: (payload['code'] ?? fallbackCode).toString(),
+      message: (payload['message'] ?? fallbackMessage).toString(),
+    );
   }
 
   Future<Directory> _ensureDirectory(String segment) async {

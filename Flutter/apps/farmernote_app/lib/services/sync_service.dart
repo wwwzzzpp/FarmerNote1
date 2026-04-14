@@ -27,10 +27,11 @@ class SyncResult {
 }
 
 class SyncServiceException implements Exception {
-  const SyncServiceException(this.code, this.message);
+  const SyncServiceException(this.code, this.message, {this.statusCode});
 
   final String code;
   final String message;
+  final int? statusCode;
 
   @override
   String toString() => 'SyncServiceException($code, $message)';
@@ -307,9 +308,15 @@ class SyncService {
     );
     final payload = _decodeResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final errorInfo = _readErrorInfo(
+        payload,
+        fallbackCode: 'sync_failed',
+        fallbackMessage: '云同步失败。',
+      );
       throw SyncServiceException(
-        (payload['code'] ?? 'sync_failed').toString(),
-        (payload['message'] ?? '云同步失败。').toString(),
+        errorInfo.code,
+        errorInfo.message,
+        statusCode: response.statusCode,
       );
     }
     return payload;
@@ -335,5 +342,31 @@ class SyncService {
       return decoded.cast<String, dynamic>();
     }
     return <String, dynamic>{};
+  }
+
+  ({String code, String message}) _readErrorInfo(
+    Map<String, dynamic> payload, {
+    required String fallbackCode,
+    required String fallbackMessage,
+  }) {
+    final nestedError = payload['error'];
+    if (nestedError is Map<String, dynamic>) {
+      return (
+        code: (nestedError['code'] ?? fallbackCode).toString(),
+        message: (nestedError['message'] ?? fallbackMessage).toString(),
+      );
+    }
+    if (nestedError is Map) {
+      final casted = nestedError.cast<String, dynamic>();
+      return (
+        code: (casted['code'] ?? fallbackCode).toString(),
+        message: (casted['message'] ?? fallbackMessage).toString(),
+      );
+    }
+
+    return (
+      code: (payload['code'] ?? fallbackCode).toString(),
+      message: (payload['message'] ?? fallbackMessage).toString(),
+    );
   }
 }

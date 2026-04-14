@@ -140,7 +140,10 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> initialize() async {
     WidgetsBinding.instance.addObserver(this);
     final stored = await _storageService.loadState();
-    await _applyState(_reconcileState(stored), shouldNotify: false);
+    await _applyState(
+      _sanitizeStoredState(_reconcileState(stored)),
+      shouldNotify: false,
+    );
     _isReady = true;
     notifyListeners();
     unawaited(_syncIfPossible(silent: true));
@@ -455,6 +458,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       await _applyState(result.state, shouldNotify: false);
       notifyListeners();
     } catch (error) {
+      if (await _handleInvalidSessionError(error)) {
+        return;
+      }
       _cloudError = _humanizeCloudError(error);
       notifyListeners();
     } finally {
@@ -474,7 +480,10 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         _lastSyncedAt = DateTime.now().toUtc();
         await _applyState(result.state, shouldNotify: false);
         notifyListeners();
-      } catch (_) {
+      } catch (error) {
+        if (await _handleInvalidSessionError(error)) {
+          return;
+        }
         // Auto-sync failures should not interrupt local usage.
       }
       return;
@@ -591,6 +600,17 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     return state.copyWith(tasks: nextTasks);
   }
 
+  StoredAppState _sanitizeStoredState(StoredAppState state) {
+    final session = state.authSession;
+    if (session == null) {
+      return state;
+    }
+    if (session.hasUsableAccessToken || session.hasUsableRefreshToken) {
+      return state;
+    }
+    return state.copyWith(clearAuthSession: true);
+  }
+
   SyncMutation _entryMutation(EntryRecord entry, SyncOperation operation) {
     return SyncMutation(
       id: _uuid.v4(),
@@ -673,11 +693,75 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     return true;
   }
 
+  Future<bool> _handleInvalidSessionError(Object error) async {
+    if (!_isInvalidSessionError(error)) {
+      return false;
+    }
+
+    _lastSyncedAt = null;
+    _cloudError = '登录状态已失效，请重新登录云端。';
+    await _applyState(
+      _currentState.copyWith(clearAuthSession: true),
+      shouldNotify: false,
+    );
+    notifyListeners();
+    return true;
+  }
+
+  bool _isInvalidSessionError(Object error) {
+    if (error is AuthServiceException) {
+      return _isInvalidSessionFailure(
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
+      );
+    }
+    if (error is SyncServiceException) {
+      return _isInvalidSessionFailure(
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
+      );
+    }
+    if (error is MediaRepositoryException) {
+      return _isInvalidSessionFailure(
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
+      );
+    }
+    return false;
+  }
+
+  bool _isInvalidSessionFailure({
+    required String code,
+    required String message,
+    required int? statusCode,
+  }) {
+    if (statusCode == 401) {
+      return true;
+    }
+
+    final normalizedCode = code.trim().toLowerCase();
+    if (normalizedCode == 'session_invalid') {
+      return true;
+    }
+
+    final normalizedMessage = message.trim().toLowerCase();
+    return normalizedMessage.contains('invalid access token') ||
+        normalizedMessage.contains('access token expired') ||
+        normalizedMessage.contains('invalid refresh token') ||
+        normalizedMessage.contains('refresh token expired');
+  }
+
   String _humanizeCloudError(Object error) {
     if (error is AuthServiceException) {
       return error.message;
     }
     if (error is SyncServiceException) {
+      return error.message;
+    }
+    if (error is MediaRepositoryException) {
       return error.message;
     }
     return '云同步暂时失败了，但本机数据已经保留。稍后再试即可。';

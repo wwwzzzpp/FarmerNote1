@@ -667,6 +667,17 @@ async function syncNow() {
       )}:${pad(now.getMinutes())}`;
       return result.state;
     } catch (error) {
+      if (cloudAuth.isSessionInvalidError(error)) {
+        const nextState = {
+          ...state,
+          authSession: null,
+        };
+        persistState(nextState);
+        lastSyncError = '登录状态已失效，请重新登录云端。';
+        lastSyncAt = '';
+        return nextState;
+      }
+
       lastSyncError =
         (error && error.message) || '云同步暂时失败了，但本机数据已经保留。稍后再试即可。';
       throw error;

@@ -2,6 +2,10 @@ function buildError(code, message, originalError) {
   const error = new Error(message);
   error.code = code;
   error.originalError = originalError || null;
+  error.statusCode =
+    (originalError && originalError.statusCode) ||
+    (originalError && originalError.originalError && originalError.originalError.statusCode) ||
+    null;
   return error;
 }
 
@@ -21,6 +25,23 @@ function normalizePayload(data) {
   return data;
 }
 
+function readErrorPayload(payload, statusCode) {
+  const nestedError = payload && payload.error && typeof payload.error === 'object' ? payload.error : null;
+  const code =
+    (nestedError && nestedError.code) ||
+    (payload && payload.code) ||
+    'request_failed';
+  const message =
+    (nestedError && nestedError.message) ||
+    (payload && payload.message) ||
+    `请求失败（${statusCode}）`;
+
+  return {
+    code: String(code || 'request_failed'),
+    message: String(message || `请求失败（${statusCode}）`),
+  };
+}
+
 function requestJson(options) {
   return new Promise((resolve, reject) => {
     wx.request({
@@ -32,10 +53,11 @@ function requestJson(options) {
       success: ({ statusCode, data }) => {
         const payload = normalizePayload(data);
         if (statusCode < 200 || statusCode >= 300) {
+          const errorPayload = readErrorPayload(payload, statusCode);
           reject(
             buildError(
-              (payload && payload.code) || 'request_failed',
-              (payload && payload.message) || `请求失败（${statusCode}）`,
+              errorPayload.code,
+              errorPayload.message,
               {
                 statusCode,
                 payload,
@@ -164,6 +186,7 @@ module.exports = {
   buildError,
   downloadFile,
   fileExists,
+  readErrorPayload,
   readFileBuffer,
   requestJson,
   requestRaw,

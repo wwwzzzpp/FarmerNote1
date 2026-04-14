@@ -1,7 +1,12 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createSession, ensureFarmerUser } from "../_shared/auth.ts";
 import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
-import { errorResponse, jsonResponse, readJson } from "../_shared/response.ts";
+import {
+  errorMessage,
+  errorResponse,
+  jsonResponse,
+  readJson,
+} from "../_shared/response.ts";
 import { exchangeWeChatCode } from "../_shared/wechat.ts";
 
 interface AuthLoginRequest {
@@ -56,7 +61,7 @@ Deno.serve(async (request) => {
     return jsonResponse(session);
   } catch (error) {
     return errorResponse(
-      error instanceof Error ? error.message : "Login failed.",
+      errorMessage(error, "Login failed."),
       400,
       "wechat_login_failed",
     );

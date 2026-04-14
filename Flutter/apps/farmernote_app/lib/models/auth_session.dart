@@ -21,6 +21,9 @@ class AuthSession {
   bool get hasUsableAccessToken =>
       accessToken.isNotEmpty && accessExpiry.isAfter(DateTime.now().toUtc());
 
+  bool get hasUsableRefreshToken =>
+      refreshToken.isNotEmpty && refreshExpiry.isAfter(DateTime.now().toUtc());
+
   bool get shouldRefresh {
     if (refreshToken.isEmpty) {
       return false;
