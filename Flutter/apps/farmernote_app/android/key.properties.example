@@ -1,0 +1,4 @@
+storePassword=chuya@farmerwang123
+keyPassword=chuya@farmerwang123!keyp
+keyAlias=wzpchuya
+storeFile=../wzpchuya-keystore.jks

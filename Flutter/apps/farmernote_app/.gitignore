@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local temporary platform folders used during environment-specific builds
+/windows.disabled/
+/linux.disabled/
+/macos.disabled/
