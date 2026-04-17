@@ -52,3 +52,5 @@ app-example
 
 # WeChat DevTools private local settings
 miniprogram/project.private.config.json
+supabase/.env.local.example
+supabase/.env.production.example
