@@ -32,12 +32,7 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
-supabase/.env.production
-supabase/.env.production.example
-supabase/.env.local
-supabase/.env.local.example
-Flutter/apps/farmernote_app/dart_defines.local.json
+
 supabase/.temp/
 supabase/.branches/
 
