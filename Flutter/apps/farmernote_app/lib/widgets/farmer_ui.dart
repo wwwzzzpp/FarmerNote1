@@ -12,6 +12,7 @@ class ScreenSectionCard extends StatelessWidget {
     this.backgroundColor = AppColors.surface,
     this.borderColor = AppColors.border,
     this.margin = const EdgeInsets.only(top: 16),
+    this.padding,
     super.key,
   });
 
@@ -19,6 +20,7 @@ class ScreenSectionCard extends StatelessWidget {
   final Color backgroundColor;
   final Color borderColor;
   final EdgeInsets margin;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class ScreenSectionCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: margin,
-      padding: EdgeInsets.all(isCompact ? 18 : 20),
+      padding: padding ?? EdgeInsets.all(isCompact ? 18 : 20),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(22),

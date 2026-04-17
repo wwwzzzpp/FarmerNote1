@@ -552,6 +552,12 @@ class _RecordScreenState extends State<RecordScreen> {
   Widget build(BuildContext context) {
     final stats = widget.controller.stats;
     final isCompact = MediaQuery.sizeOf(context).width < 380;
+    final showCloudActionButtons =
+        widget.controller.shouldShowPrimaryCloudButton ||
+        widget.controller.canLinkWeChat;
+    final showCloudSupportPanel = widget.controller.shouldShowPhoneAuthPanel;
+    final showCloudExtraContent =
+        showCloudActionButtons || showCloudSupportPanel;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -613,6 +619,10 @@ class _RecordScreenState extends State<RecordScreen> {
                 ),
               ),
               ScreenSectionCard(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 16 : 18,
+                  vertical: isCompact ? 14 : 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -629,13 +639,12 @@ class _RecordScreenState extends State<RecordScreen> {
                       widget.controller.cloudStatusDetail,
                       style: const TextStyle(
                         fontSize: 14,
-                        height: 1.65,
+                        height: 1.55,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (widget.controller.shouldShowPrimaryCloudButton ||
-                        widget.controller.canLinkWeChat)
+                    if (showCloudExtraContent) const SizedBox(height: 14),
+                    if (showCloudActionButtons)
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
@@ -670,8 +679,8 @@ class _RecordScreenState extends State<RecordScreen> {
                             ),
                         ],
                       ),
-                    if (widget.controller.shouldShowPhoneAuthPanel) ...<Widget>[
-                      const SizedBox(height: 16),
+                    if (showCloudSupportPanel) ...<Widget>[
+                      if (showCloudActionButtons) const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -1157,7 +1166,7 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: isCompact ? 12 : 14,
-          vertical: isCompact ? 14 : 16,
+          vertical: isCompact ? 10 : 12,
         ),
         decoration: BoxDecoration(
           color: AppColors.heroStat,
@@ -1170,12 +1179,12 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: isCompact ? 22 : 24,
+                fontSize: isCompact ? 20 : 22,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF504B38),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(fontSize: 12, color: Color(0xFF6B654F)),
