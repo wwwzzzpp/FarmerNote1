@@ -1,5 +1,5 @@
 {
-  "FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL": "https://your-project-ref.supabase.co/functions/v1",
+  "FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL": "http://192.168.0.108:54321/functions/v1",
   "FARMERNOTE_ENABLE_DEV_LOGIN": "false",
   "FARMERNOTE_ENABLE_FLUTTER_WECHAT_LOGIN": "false",
   "FARMERNOTE_DEV_LOGIN_KEY": "farmernote-local-shared-user",
