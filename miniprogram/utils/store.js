@@ -134,6 +134,13 @@ function sanitizeAuthSession(authSession) {
     return null;
   }
 
+  const linkedProviders =
+    authSession.userProfile && Array.isArray(authSession.userProfile.linkedProviders)
+      ? authSession.userProfile.linkedProviders
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      : [];
+
   return {
     accessToken: String(authSession.accessToken || ''),
     refreshToken: String(authSession.refreshToken || ''),
@@ -144,6 +151,8 @@ function sanitizeAuthSession(authSession) {
       unionId: String((authSession.userProfile && authSession.userProfile.unionId) || ''),
       displayName: String((authSession.userProfile && authSession.userProfile.displayName) || ''),
       avatarUrl: String((authSession.userProfile && authSession.userProfile.avatarUrl) || ''),
+      linkedProviders,
+      maskedPhone: String((authSession.userProfile && authSession.userProfile.maskedPhone) || ''),
     },
   };
 }
@@ -569,6 +578,35 @@ function isCloudConfigured() {
   return cloudConfig.isConfigured();
 }
 
+function hasLinkedProvider(session, provider) {
+  const linkedProviders =
+    session &&
+    session.userProfile &&
+    Array.isArray(session.userProfile.linkedProviders)
+      ? session.userProfile.linkedProviders
+      : [];
+  if (linkedProviders.indexOf(provider) >= 0) {
+    return true;
+  }
+
+  if (provider === 'wechat') {
+    return !!(
+      session &&
+      session.userProfile &&
+      String(session.userProfile.unionId || '').trim()
+    );
+  }
+  if (provider === 'phone') {
+    return !!(
+      session &&
+      session.userProfile &&
+      String(session.userProfile.maskedPhone || '').trim()
+    );
+  }
+
+  return linkedProviders.indexOf(provider) >= 0;
+}
+
 function getCloudStatus() {
   const state = loadState();
   const isSignedIn = !!state.authSession;
@@ -576,6 +614,19 @@ function getCloudStatus() {
     state.authSession &&
     state.authSession.userProfile &&
     String(state.authSession.userProfile.displayName || '').trim();
+  const maskedPhone =
+    state.authSession &&
+    state.authSession.userProfile &&
+    String(state.authSession.userProfile.maskedPhone || '').trim();
+  const hasPhone = hasLinkedProvider(state.authSession, 'phone');
+  const hasWeChat = hasLinkedProvider(state.authSession, 'wechat');
+  const primaryActionLabel = isSignedIn
+    ? state.pendingMutations.length > 0
+      ? '立即同步'
+      : '检查云端更新'
+    : cloudConfig.isDevLoginEnabled()
+    ? '临时登录'
+    : '微信登录';
 
   let headline = '当前处于本机模式';
   if (!cloudConfig.isConfigured()) {
@@ -585,7 +636,13 @@ function getCloudStatus() {
   } else if (syncInFlight) {
     headline = '正在同步 FarmerNote 云端数据';
   } else if (isSignedIn) {
-    headline = displayName ? `已登录 ${displayName}` : '已登录云端账号';
+    if (displayName) {
+      headline = `已登录 ${displayName}`;
+    } else if (hasPhone && maskedPhone) {
+      headline = `已登录 ${maskedPhone}`;
+    } else {
+      headline = '已登录云端账号';
+    }
   } else if (cloudConfig.isDevLoginEnabled()) {
     headline = '当前可用临时联调登录';
   }
@@ -598,6 +655,10 @@ function getCloudStatus() {
   } else if (!isSignedIn && cloudConfig.isDevLoginEnabled()) {
     detail =
       '当前会走临时联调账号登录。只要小程序和 Flutter 使用同一个 debug key，就会同步到同一个 Supabase 测试用户。';
+  } else if (isSignedIn && !hasPhone) {
+    detail = '当前账号已接入云端，但还没绑定手机号。补上手机号后，小程序和 Flutter 都能用微信或验证码进入同一个账号。';
+  } else if (isSignedIn && !hasWeChat) {
+    detail = '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进到同一个账号。';
   } else if (isSignedIn && state.pendingMutations.length > 0) {
     detail = `还有 ${state.pendingMutations.length} 条新变更待上传。当前版本只同步登录后产生的新数据，不会自动迁移旧本地记录。`;
   } else if (isSignedIn && lastSyncAt) {
@@ -610,13 +671,21 @@ function getCloudStatus() {
     isConfigured: cloudConfig.isConfigured(),
     isSignedIn,
     isBusy: !!syncInFlight || !!signInInFlight,
-    actionLabel: isSignedIn
-      ? (state.pendingMutations.length > 0 ? '立即同步' : '检查云端更新')
-      : cloudConfig.isDevLoginEnabled()
-      ? '临时登录'
-      : '微信登录',
+    actionLabel: primaryActionLabel,
+    primaryActionLabel,
+    secondaryActionLabel:
+      !isSignedIn && !cloudConfig.isDevLoginEnabled() ? '手机号验证码登录' : '',
     headline,
     detail,
+    linkedProviders:
+      state.authSession && state.authSession.userProfile
+        ? state.authSession.userProfile.linkedProviders || []
+        : [],
+    maskedPhone,
+    canLinkPhone: isSignedIn && !hasPhone && !cloudConfig.isDevLoginEnabled(),
+    canLinkWeChat: isSignedIn && !hasWeChat && !cloudConfig.isDevLoginEnabled(),
+    hasPhone,
+    hasWeChat,
   };
 }
 
@@ -634,6 +703,92 @@ async function signInToCloud() {
       ...state,
       authSession: session,
     });
+    lastSyncError = '';
+    await syncNow();
+    return session;
+  })();
+
+  try {
+    return await signInInFlight;
+  } finally {
+    signInInFlight = null;
+  }
+}
+
+async function sendPhoneCodeToCloud(phone) {
+  return cloudAuth.sendPhoneCode(phone);
+}
+
+async function signInToCloudWithPhone(phone, code) {
+  if (signInInFlight) {
+    return signInInFlight;
+  }
+
+  signInInFlight = (async () => {
+    const session = await cloudAuth.loginWithPhone(phone, code);
+    const state = loadState();
+    persistState({
+      ...state,
+      authSession: session,
+    });
+    lastSyncError = '';
+    await syncNow();
+    return session;
+  })();
+
+  try {
+    return await signInInFlight;
+  } finally {
+    signInInFlight = null;
+  }
+}
+
+async function linkPhoneToCloud(phone, code) {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    throw new Error('当前还没有登录云端账号。');
+  }
+
+  if (signInInFlight) {
+    return signInInFlight;
+  }
+
+  signInInFlight = (async () => {
+    const session = await cloudAuth.linkPhone(state.authSession, phone, code);
+    const nextState = {
+      ...state,
+      authSession: session,
+    };
+    persistState(nextState);
+    lastSyncError = '';
+    await syncNow();
+    return session;
+  })();
+
+  try {
+    return await signInInFlight;
+  } finally {
+    signInInFlight = null;
+  }
+}
+
+async function linkWeChatToCloud() {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    throw new Error('当前还没有登录云端账号。');
+  }
+
+  if (signInInFlight) {
+    return signInInFlight;
+  }
+
+  signInInFlight = (async () => {
+    const session = await cloudAuth.linkWithWeChat(state.authSession);
+    const nextState = {
+      ...state,
+      authSession: session,
+    };
+    persistState(nextState);
     lastSyncError = '';
     await syncNow();
     return session;
@@ -703,7 +858,11 @@ module.exports = {
   getTimelineEntries,
   isCloudConfigured,
   isSignedInToCloud,
+  linkPhoneToCloud,
+  linkWeChatToCloud,
   loadState,
+  sendPhoneCodeToCloud,
   signInToCloud,
+  signInToCloudWithPhone,
   syncNow,
 };

@@ -1,6 +1,10 @@
+import {
+  linkWeChatIdentityToUser,
+  replaceSession,
+  requireSession,
+} from "../_shared/auth.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { createSession, signInWithWeChatIdentity } from "../_shared/auth.ts";
-import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
+import { enforceUserRateLimit } from "../_shared/rate-limit.ts";
 import {
   errorMessage,
   errorResponse,
@@ -9,10 +13,9 @@ import {
 } from "../_shared/response.ts";
 import { exchangeWeChatCode } from "../_shared/wechat.ts";
 
-interface AuthLoginRequest {
+interface AuthLinkWeChatRequest {
   platform: "mini_program" | "flutter_app";
   wechatCode: string;
-  deviceId?: string;
 }
 
 Deno.serve(async (request) => {
@@ -25,15 +28,16 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const limited = await enforceIpRateLimit({
-      endpoint: "auth-wechat-login",
-      request,
+    const session = await requireSession(request);
+    const limited = await enforceUserRateLimit({
+      endpoint: "auth-link-wechat",
+      session,
     });
     if (limited) {
       return limited;
     }
 
-    const body = await readJson<AuthLoginRequest>(request);
+    const body = await readJson<AuthLinkWeChatRequest>(request);
     if (
       !body ||
       (body.platform !== "mini_program" && body.platform !== "flutter_app")
@@ -43,27 +47,26 @@ Deno.serve(async (request) => {
 
     const identity = await exchangeWeChatCode({
       platform: body.platform,
-      wechatCode: body.wechatCode,
+      wechatCode: String(body.wechatCode ?? ""),
     });
-
-    const userId = await signInWithWeChatIdentity({
+    const userId = await linkWeChatIdentityToUser({
+      currentUserId: session.userId,
       unionId: identity.unionId,
-      platform: identity.platform,
-      openId: identity.openId,
+      miniOpenId: identity.platform === "mini_program" ? identity.openId : "",
+      appOpenId: identity.platform === "flutter_app" ? identity.openId : "",
     });
 
-    const session = await createSession({
+    const nextSession = await replaceSession({
+      session,
       userId,
-      platform: body.platform,
-      deviceId: body.deviceId,
     });
 
-    return jsonResponse(session);
+    return jsonResponse(nextSession);
   } catch (error) {
     return errorResponse(
-      errorMessage(error, "Login failed."),
+      errorMessage(error, "微信绑定失败。"),
       400,
-      "wechat_login_failed",
+      "link_wechat_failed",
     );
   }
 });

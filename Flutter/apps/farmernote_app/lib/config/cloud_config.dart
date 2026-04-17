@@ -4,7 +4,7 @@ class CloudConfig {
   );
   static const String devLoginMode = String.fromEnvironment(
     'FARMERNOTE_ENABLE_DEV_LOGIN',
-    defaultValue: 'auto',
+    defaultValue: 'false',
   );
   static const String devLoginKey = String.fromEnvironment(
     'FARMERNOTE_DEV_LOGIN_KEY',
@@ -31,7 +31,7 @@ class CloudConfig {
     if (normalizedMode == 'false' || normalizedMode == '0') {
       return false;
     }
-    return supabaseFunctionsBaseUrl.startsWith('http://');
+    return false;
   }
 
   static bool get isFlutterWeChatConfigured => flutterWeChatAppId.isNotEmpty;

@@ -39,7 +39,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-if grep -Eq 'your-project-ref|your-supabase-service-role-key|your-miniprogram-app-secret|your-open-platform-app-secret|wx_your_' "$ENV_FILE"; then
+if grep -Eq 'your-project-ref|your-supabase-service-role-key|your-miniprogram-app-secret|your-open-platform-app-secret|wx_your_|your-aliyun-access-key-id|your-aliyun-access-key-secret|your-approved-sign-name|SMS_123456789|replace-with-a-long-random-secret' "$ENV_FILE"; then
   echo "Error: placeholder values still exist in $ENV_FILE"
   exit 1
 fi
@@ -55,6 +55,10 @@ supabase db push
 
 FUNCTIONS=(
   auth-wechat-login
+  auth-phone-send-code
+  auth-phone-login
+  auth-link-phone
+  auth-link-wechat
   auth-refresh
   sync-push
   sync-pull

@@ -1,7 +1,8 @@
 const SUPABASE_FUNCTIONS_BASE_URL = 'https://rfnjqodcpxxmxinijqcb.supabase.co/functions/v1';
 // const SUPABASE_FUNCTIONS_BASE_URL = 'http://192.168.0.108:54321/functions/v1';
-// const ENABLE_DEV_LOGIN = /^http:\/\//.test(SUPABASE_FUNCTIONS_BASE_URL);
-const ENABLE_DEV_LOGIN = /^http:\/\//.test(SUPABASE_FUNCTIONS_BASE_URL);
+// 本机联调默认也走和线上一致的微信 + 手机号登录。
+// 只有明确想切回临时联调账号时，再手动改成 true。
+const ENABLE_DEV_LOGIN = false;
 const DEV_LOGIN_KEY = 'farmernote-local-shared-user';
 const DEV_LOGIN_DISPLAY_NAME = 'FarmerNote 临时联调';
 

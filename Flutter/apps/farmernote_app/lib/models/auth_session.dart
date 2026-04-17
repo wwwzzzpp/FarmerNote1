@@ -15,6 +15,9 @@ class AuthSession {
   final String refreshExpiresAt;
   final CloudUserProfile userProfile;
 
+  bool get hasWeChatLinked => userProfile.hasWeChatLinked;
+  bool get hasPhoneLinked => userProfile.hasPhoneLinked;
+
   DateTime get accessExpiry => DateTime.parse(accessExpiresAt).toUtc();
   DateTime get refreshExpiry => DateTime.parse(refreshExpiresAt).toUtc();
 

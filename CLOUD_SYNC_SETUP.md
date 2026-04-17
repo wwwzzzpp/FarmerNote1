@@ -6,7 +6,7 @@
 - Flutter：`/Users/wzp/Documents/GitHub/FarmerNote1/Flutter/apps/farmernote_app`
 - 服务端：`/Users/wzp/Documents/GitHub/FarmerNote1/supabase`
 
-目标是把“代码已经写好”推进到“真机可以登录、同步和恢复数据”。
+目标是把“代码已经写好”推进到“真机可以用微信或手机号登录、完成账号绑定、同步和恢复数据”。
 
 ## 1. 先准备账号
 
@@ -61,6 +61,8 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 这会启用一个仅用于开发联调的 `auth-dev-login`。小程序和 Flutter 只要使用同一个 `debug key`，就会同步到同一个 Supabase 测试用户。
 
+如果你已经配好了本机的微信环境和阿里云短信配置，本地联调默认会直接走和线上一致的微信登录、手机号验证码登录，不会因为函数地址是 `http://` 就自动切到临时登录。
+
 如果你要调整接口防刷阈值，也可以在这里改：
 
 ```text
@@ -75,6 +77,16 @@ FARMERNOTE_IP_RATE_LIMIT_PER_MINUTE=30
 - 每分钟每个接口默认最多 30 次请求
 
 ### 本地启动
+
+这一版的手机号验证码由 Edge Functions 自己生成、存库并调用阿里云短信发送，不再依赖 Supabase Auth 的 Phone provider。正式联调前，记得把下面这些短信环境变量补齐：
+
+```text
+FARMERNOTE_PHONE_CODE_SECRET=一段足够长的随机字符串
+ALIYUN_SMS_ACCESS_KEY_ID=你的阿里云 AccessKey ID
+ALIYUN_SMS_ACCESS_KEY_SECRET=你的阿里云 AccessKey Secret
+ALIYUN_SMS_SIGN_NAME=已审核通过的短信签名
+ALIYUN_SMS_TEMPLATE_CODE=已审核通过的验证码模板
+```
 
 ```bash
 supabase start
@@ -120,6 +132,10 @@ supabase link --project-ref <your-project-ref>
 supabase secrets set --env-file supabase/.env.production
 supabase db push
 supabase functions deploy auth-wechat-login --no-verify-jwt
+supabase functions deploy auth-phone-send-code --no-verify-jwt
+supabase functions deploy auth-phone-login --no-verify-jwt
+supabase functions deploy auth-link-phone --no-verify-jwt
+supabase functions deploy auth-link-wechat --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
@@ -221,10 +237,11 @@ https://your-project-ref.supabase.co
 1. 小程序登录微信，创建一条“文字 + 图片 + 待办”的新记录。
 2. 看 Supabase 数据库里是否出现 `entries` / `tasks` 数据。
 3. 看 Storage 的 `entry-photos` 里是否出现图片对象。
-4. Flutter 用同一微信账号登录。
-5. Flutter 下拉刷新后，确认记录、图片、待办都出现。
-6. Flutter 完成待办，再回到小程序下拉刷新，确认状态变成“已完成”。
-7. Flutter 删除记录，再回到小程序下拉刷新，确认时间线和待办一起消失。
+4. 小程序在账号卡片里补绑手机号。
+5. Flutter 用同一手机号验证码登录。
+6. Flutter 下拉刷新后，确认记录、图片、待办都出现。
+7. Flutter 完成待办，再回到小程序下拉刷新，确认状态变成“已完成”。
+8. Flutter 若只用手机号登录，再补绑微信，确认以后两端都能用微信或手机号进入同一个账号。
 
 如果你现在还不能走真实微信登录，就改成这组本地验证：
 

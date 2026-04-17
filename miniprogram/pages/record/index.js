@@ -35,6 +35,10 @@ Page({
     feedbackMessage: '',
     photoTempPath: '',
     isSaving: false,
+    phoneNumber: '',
+    phoneCode: '',
+    phoneCodeCountdown: 0,
+    phoneActionBusy: false,
     stats: {
       entryCount: 0,
       pendingTaskCount: 0,
@@ -53,6 +57,7 @@ Page({
 
   onLoad() {
     this.noteAnalysisTimer = null;
+    this.phoneCodeTimer = null;
     this.lastAcceptedNoteText = '';
     this.lastLineLimitToastAt = 0;
     this.ensureReminderDraft();
@@ -63,6 +68,11 @@ Page({
     if (this.noteAnalysisTimer) {
       clearTimeout(this.noteAnalysisTimer);
       this.noteAnalysisTimer = null;
+    }
+
+    if (this.phoneCodeTimer) {
+      clearInterval(this.phoneCodeTimer);
+      this.phoneCodeTimer = null;
     }
   },
 
@@ -102,6 +112,32 @@ Page({
       cloudStatus: store.getCloudStatus(),
     });
     this.updatePreview();
+  },
+
+  startPhoneCodeCountdown() {
+    if (this.phoneCodeTimer) {
+      clearInterval(this.phoneCodeTimer);
+    }
+
+    this.setData({
+      phoneCodeCountdown: 60,
+    });
+
+    this.phoneCodeTimer = setInterval(() => {
+      const next = Number(this.data.phoneCodeCountdown || 0) - 1;
+      if (next <= 0) {
+        clearInterval(this.phoneCodeTimer);
+        this.phoneCodeTimer = null;
+        this.setData({
+          phoneCodeCountdown: 0,
+        });
+        return;
+      }
+
+      this.setData({
+        phoneCodeCountdown: next,
+      });
+    }, 1000);
   },
 
   updatePreview() {
@@ -580,6 +616,127 @@ Page({
       wx.showToast({
         title: (error && error.message) || '云同步失败，请稍后再试',
         icon: 'none',
+      });
+    }
+  },
+
+  handlePhoneNumberInput(event) {
+    this.setData({
+      phoneNumber: String((event.detail && event.detail.value) || ''),
+    });
+  },
+
+  handlePhoneCodeInput(event) {
+    this.setData({
+      phoneCode: String((event.detail && event.detail.value) || '').replace(/\s+/g, ''),
+    });
+  },
+
+  async handleSendPhoneCode() {
+    if (this.data.phoneActionBusy || this.data.phoneCodeCountdown > 0) {
+      return;
+    }
+
+    this.setData({
+      phoneActionBusy: true,
+    });
+
+    try {
+      await store.sendPhoneCodeToCloud(this.data.phoneNumber);
+      this.startPhoneCodeCountdown();
+      wx.showToast({
+        title: '验证码已发送',
+        icon: 'none',
+      });
+    } catch (error) {
+      wx.showToast({
+        title: (error && error.message) || '验证码发送失败',
+        icon: 'none',
+      });
+    } finally {
+      this.setData({
+        phoneActionBusy: false,
+      });
+      await this.refreshPage({
+        sync: false,
+      });
+    }
+  },
+
+  async handleCloudPhoneAction() {
+    if (this.data.phoneActionBusy) {
+      return;
+    }
+
+    this.setData({
+      phoneActionBusy: true,
+    });
+
+    try {
+      if (store.isSignedInToCloud()) {
+        await store.linkPhoneToCloud(this.data.phoneNumber, this.data.phoneCode);
+        wx.showToast({
+          title: '手机号已绑定',
+          icon: 'none',
+        });
+      } else {
+        await store.signInToCloudWithPhone(this.data.phoneNumber, this.data.phoneCode);
+        wx.showToast({
+          title: '已登录云端',
+          icon: 'none',
+        });
+      }
+
+      this.setData({
+        phoneCode: '',
+      });
+      await this.refreshPage({
+        sync: false,
+      });
+    } catch (error) {
+      await this.refreshPage({
+        sync: false,
+      });
+      wx.showToast({
+        title: (error && error.message) || '手机号操作失败',
+        icon: 'none',
+      });
+    } finally {
+      this.setData({
+        phoneActionBusy: false,
+      });
+    }
+  },
+
+  async handleLinkWeChatAction() {
+    if (this.data.phoneActionBusy) {
+      return;
+    }
+
+    this.setData({
+      phoneActionBusy: true,
+    });
+
+    try {
+      await store.linkWeChatToCloud();
+      await this.refreshPage({
+        sync: false,
+      });
+      wx.showToast({
+        title: '微信已绑定',
+        icon: 'none',
+      });
+    } catch (error) {
+      await this.refreshPage({
+        sync: false,
+      });
+      wx.showToast({
+        title: (error && error.message) || '微信绑定失败',
+        icon: 'none',
+      });
+    } finally {
+      this.setData({
+        phoneActionBusy: false,
       });
     }
   },

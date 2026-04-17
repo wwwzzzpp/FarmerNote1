@@ -23,14 +23,59 @@
   <view class="section-card">
     <text class="section-title">{{cloudStatus.headline}}</text>
     <text class="helper-text">{{cloudStatus.detail}}</text>
-    <button
-      class="action-button primary-button small-button cloud-sync-button"
-      bindtap="handleCloudPrimaryAction"
-      loading="{{cloudStatus.isBusy}}"
-      disabled="{{!cloudStatus.isConfigured}}"
-    >
-      {{cloudStatus.actionLabel}}
-    </button>
+    <view class="cloud-auth-actions">
+      <button
+        class="action-button primary-button small-button cloud-sync-button"
+        bindtap="handleCloudPrimaryAction"
+        loading="{{cloudStatus.isBusy}}"
+        disabled="{{!cloudStatus.isConfigured}}"
+      >
+        {{cloudStatus.primaryActionLabel || cloudStatus.actionLabel}}
+      </button>
+      <button
+        wx:if="{{cloudStatus.canLinkWeChat}}"
+        class="action-button ghost-button small-button cloud-secondary-button"
+        bindtap="handleLinkWeChatAction"
+        disabled="{{!cloudStatus.isConfigured || phoneActionBusy}}"
+      >
+        绑定微信
+      </button>
+    </view>
+
+    <view wx:if="{{cloudStatus.secondaryActionLabel || cloudStatus.canLinkPhone}}" class="cloud-phone-panel">
+      <input
+        class="cloud-input"
+        type="number"
+        placeholder="输入中国大陆手机号，例如 13800138000"
+        value="{{phoneNumber}}"
+        bindinput="handlePhoneNumberInput"
+      />
+      <view class="cloud-code-row">
+        <input
+          class="cloud-input cloud-input--code"
+          type="number"
+          maxlength="6"
+          placeholder="输入验证码"
+          value="{{phoneCode}}"
+          bindinput="handlePhoneCodeInput"
+        />
+        <button
+          class="action-button ghost-button small-button cloud-code-button"
+          bindtap="handleSendPhoneCode"
+          disabled="{{!cloudStatus.isConfigured || phoneActionBusy || phoneCodeCountdown > 0}}"
+        >
+          {{phoneCodeCountdown > 0 ? phoneCodeCountdown + ' 秒后重发' : '发送验证码'}}
+        </button>
+      </view>
+      <button
+        class="action-button secondary-button small-button cloud-submit-button"
+        bindtap="handleCloudPhoneAction"
+        disabled="{{!cloudStatus.isConfigured || phoneActionBusy}}"
+        loading="{{phoneActionBusy}}"
+      >
+        {{cloudStatus.canLinkPhone ? '绑定手机号' : '手机号验证码登录'}}
+      </button>
+    </view>
   </view>
 
   <view class="section-card">

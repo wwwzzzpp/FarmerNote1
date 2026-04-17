@@ -1,5 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { createSession, signInWithWeChatIdentity } from "../_shared/auth.ts";
+import { createSession, signInWithPhoneNumber } from "../_shared/auth.ts";
 import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
 import {
   errorMessage,
@@ -7,11 +7,12 @@ import {
   jsonResponse,
   readJson,
 } from "../_shared/response.ts";
-import { exchangeWeChatCode } from "../_shared/wechat.ts";
+import { normalizePhoneNumber, verifyPhoneOtp } from "../_shared/phone.ts";
 
-interface AuthLoginRequest {
+interface AuthPhoneLoginRequest {
   platform: "mini_program" | "flutter_app";
-  wechatCode: string;
+  phone: string;
+  code: string;
   deviceId?: string;
 }
 
@@ -26,14 +27,14 @@ Deno.serve(async (request) => {
 
   try {
     const limited = await enforceIpRateLimit({
-      endpoint: "auth-wechat-login",
+      endpoint: "auth-phone-login",
       request,
     });
     if (limited) {
       return limited;
     }
 
-    const body = await readJson<AuthLoginRequest>(request);
+    const body = await readJson<AuthPhoneLoginRequest>(request);
     if (
       !body ||
       (body.platform !== "mini_program" && body.platform !== "flutter_app")
@@ -41,15 +42,13 @@ Deno.serve(async (request) => {
       return errorResponse("Invalid platform.", 400, "invalid_platform");
     }
 
-    const identity = await exchangeWeChatCode({
-      platform: body.platform,
-      wechatCode: body.wechatCode,
+    const phone = normalizePhoneNumber(String(body.phone ?? ""));
+    const verifiedPhone = await verifyPhoneOtp({
+      phone,
+      token: String(body.code ?? ""),
     });
-
-    const userId = await signInWithWeChatIdentity({
-      unionId: identity.unionId,
-      platform: identity.platform,
-      openId: identity.openId,
+    const userId = await signInWithPhoneNumber({
+      phone: verifiedPhone,
     });
 
     const session = await createSession({
@@ -61,9 +60,9 @@ Deno.serve(async (request) => {
     return jsonResponse(session);
   } catch (error) {
     return errorResponse(
-      errorMessage(error, "Login failed."),
+      errorMessage(error, "手机号登录失败。"),
       400,
-      "wechat_login_failed",
+      "phone_login_failed",
     );
   }
 });

@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:fluwx/fluwx.dart';
@@ -29,64 +29,90 @@ class AuthService {
   final http.Client _client;
   bool _registered = false;
 
+  bool get canUseWeChatAuth =>
+      CloudConfig.isFlutterWeChatConfigured &&
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  Future<void> sendPhoneCode(String phone) async {
+    _ensureCloudConfigured();
+    final normalizedPhone = _normalizePhoneNumber(phone);
+    await _postJson(
+      endpoint: 'auth-phone-send-code',
+      body: <String, dynamic>{'phone': normalizedPhone},
+      fallbackMessage: '验证码发送失败。',
+    );
+  }
+
+  Future<AuthSession> signInWithPhone({
+    required String phone,
+    required String code,
+  }) async {
+    _ensureCloudConfigured();
+    return _postAuth(
+      endpoint: 'auth-phone-login',
+      body: <String, dynamic>{
+        'platform': 'flutter_app',
+        'phone': _normalizePhoneNumber(phone),
+        'code': code.trim(),
+        'deviceId': await _ensureDeviceId(),
+      },
+      fallbackMessage: '手机号登录失败。',
+    );
+  }
+
+  Future<AuthSession> linkPhone({
+    required AuthSession session,
+    required String phone,
+    required String code,
+  }) async {
+    _ensureCloudConfigured();
+    return _postAuth(
+      endpoint: 'auth-link-phone',
+      body: <String, dynamic>{
+        'phone': _normalizePhoneNumber(phone),
+        'code': code.trim(),
+      },
+      bearerToken: session.accessToken,
+      fallbackMessage: '手机号绑定失败。',
+    );
+  }
+
   Future<AuthSession> signInWithWeChat() async {
-    if (!CloudConfig.isSupabaseConfigured) {
-      throw const AuthServiceException(
-        'cloud_not_configured',
-        '还没配置 Supabase Functions 地址，请先补上 dart-define。',
-      );
-    }
+    _ensureCloudConfigured();
+    _ensureWeChatConfigured();
 
-    if (!CloudConfig.isFlutterWeChatConfigured) {
-      throw const AuthServiceException(
-        'wechat_not_configured',
-        '还没配置 Flutter 微信 AppId，请先补上 dart-define。',
-      );
-    }
-
-    if (kIsWeb ||
-        (defaultTargetPlatform != TargetPlatform.android &&
-            defaultTargetPlatform != TargetPlatform.iOS)) {
-      throw const AuthServiceException(
-        'unsupported_platform',
-        '当前平台暂不支持 Flutter 微信登录，请在 Android 或 iPhone 真机上登录。',
-      );
-    }
-
-    await _ensureFluwxRegistered();
-    final installed = await Fluwx().isWeChatInstalled;
-    if (!installed) {
-      throw const AuthServiceException(
-        'wechat_not_installed',
-        '这台设备还没装微信，暂时没法完成微信登录。',
-      );
-    }
-
-    final authResponse = await _requestWeChatAuthCode();
-    if ((authResponse.code ?? '').isEmpty) {
-      throw const AuthServiceException(
-        'wechat_auth_failed',
-        '没有拿到微信登录授权码，请重试一次。',
-      );
-    }
-
+    final authCode = await _requestWeChatCode();
     return _postAuth(
       endpoint: 'auth-wechat-login',
       body: <String, dynamic>{
         'platform': 'flutter_app',
-        'wechatCode': authResponse.code,
+        'wechatCode': authCode,
         'deviceId': await _ensureDeviceId(),
       },
+      fallbackMessage: '微信登录失败。',
+    );
+  }
+
+  Future<AuthSession> linkWeChat({required AuthSession session}) async {
+    _ensureCloudConfigured();
+    _ensureWeChatConfigured();
+
+    final authCode = await _requestWeChatCode();
+    return _postAuth(
+      endpoint: 'auth-link-wechat',
+      body: <String, dynamic>{
+        'platform': 'flutter_app',
+        'wechatCode': authCode,
+      },
+      bearerToken: session.accessToken,
+      fallbackMessage: '微信绑定失败。',
     );
   }
 
   Future<AuthSession> signInWithDevLogin() async {
-    if (!CloudConfig.isSupabaseConfigured) {
-      throw const AuthServiceException(
-        'cloud_not_configured',
-        '还没配置 Supabase Functions 地址，请先补上 dart-define。',
-      );
-    }
+    _ensureCloudConfigured();
 
     if (!CloudConfig.isDevLoginEnabled) {
       throw const AuthServiceException(
@@ -103,6 +129,7 @@ class AuthService {
         'displayName': CloudConfig.devLoginDisplayName,
         'deviceId': await _ensureDeviceId(),
       },
+      fallbackMessage: '临时联调登录失败。',
     );
   }
 
@@ -110,16 +137,87 @@ class AuthService {
     return _postAuth(
       endpoint: 'auth-refresh',
       body: <String, dynamic>{'refreshToken': session.refreshToken},
+      fallbackMessage: '刷新登录状态失败。',
     );
+  }
+
+  void _ensureCloudConfigured() {
+    if (!CloudConfig.isSupabaseConfigured) {
+      throw const AuthServiceException(
+        'cloud_not_configured',
+        '还没配置 Supabase Functions 地址，请先补上 dart-define。',
+      );
+    }
+  }
+
+  void _ensureWeChatConfigured() {
+    if (!CloudConfig.isFlutterWeChatConfigured) {
+      throw const AuthServiceException(
+        'wechat_not_configured',
+        '还没配置 Flutter 微信 AppId，请先补上 dart-define。',
+      );
+    }
+
+    if (!canUseWeChatAuth) {
+      throw const AuthServiceException(
+        'unsupported_platform',
+        '当前平台暂不支持 Flutter 微信登录，请在 Android 或 iPhone 真机上登录。',
+      );
+    }
+  }
+
+  String _normalizePhoneNumber(String value) {
+    final trimmed = value.trim().replaceAll(RegExp(r'[^\d+]'), '');
+    if (trimmed.isEmpty) {
+      throw const AuthServiceException('invalid_phone', '请输入手机号。');
+    }
+
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+    if (RegExp(r'^1\d{10}$').hasMatch(digits)) {
+      return '+86$digits';
+    }
+    if (RegExp(r'^86\d{11}$').hasMatch(digits)) {
+      return '+$digits';
+    }
+    if (trimmed.startsWith('+')) {
+      final prefixed = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+      if (RegExp(r'^\+861\d{10}$').hasMatch(prefixed)) {
+        return prefixed;
+      }
+    }
+
+    throw const AuthServiceException('invalid_phone', '当前仅支持中国大陆手机号。');
   }
 
   Future<AuthSession> _postAuth({
     required String endpoint,
     required Map<String, dynamic> body,
+    required String fallbackMessage,
+    String bearerToken = '',
   }) async {
+    final payload = await _postJson(
+      endpoint: endpoint,
+      body: body,
+      bearerToken: bearerToken,
+      fallbackMessage: fallbackMessage,
+    );
+    return AuthSession.fromJson(payload);
+  }
+
+  Future<Map<String, dynamic>> _postJson({
+    required String endpoint,
+    required Map<String, dynamic> body,
+    required String fallbackMessage,
+    String bearerToken = '',
+  }) async {
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (bearerToken.trim().isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${bearerToken.trim()}';
+    }
+
     final response = await _client.post(
       CloudConfig.functionUri(endpoint),
-      headers: const <String, String>{'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(body),
     );
     final payload = _decodeResponse(response);
@@ -127,7 +225,7 @@ class AuthService {
       final errorInfo = _readErrorInfo(
         payload,
         fallbackCode: 'request_failed',
-        fallbackMessage: '登录请求失败。',
+        fallbackMessage: fallbackMessage,
       );
       throw AuthServiceException(
         errorInfo.code,
@@ -135,7 +233,7 @@ class AuthService {
         statusCode: response.statusCode,
       );
     }
-    return AuthSession.fromJson(payload);
+    return payload;
   }
 
   Future<void> _ensureFluwxRegistered() async {
@@ -149,7 +247,17 @@ class AuthService {
     _registered = true;
   }
 
-  Future<WeChatAuthResponse> _requestWeChatAuthCode() async {
+  Future<String> _requestWeChatCode() async {
+    await _ensureFluwxRegistered();
+
+    final installed = await Fluwx().isWeChatInstalled;
+    if (!installed) {
+      throw const AuthServiceException(
+        'wechat_not_installed',
+        '这台设备还没装微信，暂时没法完成微信登录。',
+      );
+    }
+
     final fluwx = Fluwx();
     final completer = Completer<WeChatAuthResponse>();
     final cancelable = fluwx.addSubscriber((response) {
@@ -180,7 +288,17 @@ class AuthService {
     }
 
     try {
-      return await completer.future.timeout(const Duration(seconds: 60));
+      final authResponse = await completer.future.timeout(
+        const Duration(seconds: 60),
+      );
+      final code = (authResponse.code ?? '').trim();
+      if (code.isEmpty) {
+        throw const AuthServiceException(
+          'wechat_auth_failed',
+          '没有拿到微信登录授权码，请重试一次。',
+        );
+      }
+      return code;
     } on TimeoutException {
       throw const AuthServiceException(
         'wechat_auth_timeout',

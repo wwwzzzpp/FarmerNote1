@@ -82,3 +82,63 @@
   width: 240rpx;
   margin-top: 20rpx;
 }
+
+.cloud-auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.cloud-secondary-button {
+  min-height: 64rpx;
+  border-radius: 18rpx;
+  padding: 0 22rpx;
+  font-size: 24rpx;
+}
+
+.cloud-phone-panel {
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border-radius: 20rpx;
+  border: 1px solid #ddd4c2;
+  background: #f3efe4;
+}
+
+.cloud-input {
+  height: 76rpx;
+  padding: 0 22rpx;
+  border-radius: 18rpx;
+  border: 1px solid #d6ccb5;
+  background: #faf6ed;
+  font-size: 26rpx;
+  color: #3d3a2f;
+  box-sizing: border-box;
+}
+
+.cloud-code-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+
+.cloud-input--code {
+  flex: 1;
+}
+
+.cloud-code-button {
+  min-width: 220rpx;
+  min-height: 64rpx;
+  border-radius: 18rpx;
+  padding: 0 18rpx;
+  font-size: 24rpx;
+}
+
+.cloud-submit-button {
+  width: 100%;
+  margin-top: 12rpx;
+  min-height: 68rpx;
+  border-radius: 18rpx;
+  font-size: 26rpx;
+}
