@@ -81,6 +81,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       isSignedIn && !hasLinkedWeChat && !isDevLoginEnabled && canUseWeChatLogin;
   bool get shouldShowPhoneAuthPanel =>
       isCloudConfigured && !isDevLoginEnabled && (!isSignedIn || canLinkPhone);
+  bool get shouldShowPrimaryCloudButton =>
+      isSignedIn || isDevLoginEnabled || canUseWeChatLogin;
   bool get canTriggerPrimaryCloudAction =>
       isCloudConfigured &&
       (isSignedIn || isDevLoginEnabled || canUseWeChatLogin);
@@ -110,7 +112,11 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       return '当前还没接入云端环境';
     }
     if (_isAuthenticating) {
-      return isDevLoginEnabled ? '正在接入临时联调账号' : '正在通过微信登录云端';
+      return isDevLoginEnabled
+          ? '正在接入临时联调账号'
+          : canUseWeChatLogin
+          ? '正在通过微信登录云端'
+          : '正在登录云端';
     }
     if (_isSyncing) {
       return '正在同步 FarmerNote 云端数据';
@@ -149,7 +155,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       return '当前账号已接入云端，但还没绑定手机号。补上手机号后，小程序和 Flutter 都能用微信或验证码进入同一个账号。';
     }
     if (!hasLinkedWeChat) {
-      return '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进入同一个账号。';
+      return canUseWeChatLogin
+          ? '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进入同一个账号。'
+          : '当前账号已绑定手机号。等移动端微信登录入口重新开放后，再补绑微信即可。';
     }
     if (pendingCloudChangeCount > 0) {
       return '还有 $pendingCloudChangeCount 条新变更待上传。当前版本只同步新版产生的数据，不会自动迁移旧本地记录。';

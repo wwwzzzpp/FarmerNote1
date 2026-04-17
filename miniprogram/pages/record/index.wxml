@@ -23,8 +23,9 @@
   <view class="section-card">
     <text class="section-title">{{cloudStatus.headline}}</text>
     <text class="helper-text">{{cloudStatus.detail}}</text>
-    <view class="cloud-auth-actions">
+    <view wx:if="{{cloudStatus.shouldShowPrimaryAction || cloudStatus.canLinkWeChat}}" class="cloud-auth-actions">
       <button
+        wx:if="{{cloudStatus.shouldShowPrimaryAction}}"
         class="action-button primary-button small-button cloud-sync-button"
         bindtap="handleCloudPrimaryAction"
         loading="{{cloudStatus.isBusy}}"

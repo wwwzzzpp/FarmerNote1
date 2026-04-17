@@ -578,6 +578,10 @@ function isCloudConfigured() {
   return cloudConfig.isConfigured();
 }
 
+function canUseWeChatLogin() {
+  return cloudConfig.isWeChatLoginEnabled();
+}
+
 function hasLinkedProvider(session, provider) {
   const linkedProviders =
     session &&
@@ -626,13 +630,19 @@ function getCloudStatus() {
       : '检查云端更新'
     : cloudConfig.isDevLoginEnabled()
     ? '临时登录'
-    : '微信登录';
+    : canUseWeChatLogin()
+    ? '微信登录'
+    : '';
 
   let headline = '当前处于本机模式';
   if (!cloudConfig.isConfigured()) {
     headline = '当前还没接入云端环境';
   } else if (signInInFlight) {
-    headline = cloudConfig.isDevLoginEnabled() ? '正在接入临时联调账号' : '正在通过微信登录云端';
+    headline = cloudConfig.isDevLoginEnabled()
+      ? '正在接入临时联调账号'
+      : canUseWeChatLogin()
+      ? '正在通过微信登录云端'
+      : '正在登录云端';
   } else if (syncInFlight) {
     headline = '正在同步 FarmerNote 云端数据';
   } else if (isSignedIn) {
@@ -645,6 +655,8 @@ function getCloudStatus() {
     }
   } else if (cloudConfig.isDevLoginEnabled()) {
     headline = '当前可用临时联调登录';
+  } else if (!canUseWeChatLogin()) {
+    headline = '当前优先使用手机号登录';
   }
 
   let detail = '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
@@ -658,13 +670,17 @@ function getCloudStatus() {
   } else if (isSignedIn && !hasPhone) {
     detail = '当前账号已接入云端，但还没绑定手机号。补上手机号后，小程序和 Flutter 都能用微信或验证码进入同一个账号。';
   } else if (isSignedIn && !hasWeChat) {
-    detail = '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进到同一个账号。';
+    detail = canUseWeChatLogin()
+      ? '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进到同一个账号。'
+      : '当前账号已绑定手机号。等小程序微信登录入口重新开放后，再补绑微信即可。';
   } else if (isSignedIn && state.pendingMutations.length > 0) {
     detail = `还有 ${state.pendingMutations.length} 条新变更待上传。当前版本只同步登录后产生的新数据，不会自动迁移旧本地记录。`;
   } else if (isSignedIn && lastSyncAt) {
     detail = `云端和本机已对齐，上次同步时间 ${lastSyncAt}。`;
   } else if (isSignedIn) {
     detail = '新创建的记录会自动同步到云端，并提供给同账号的小程序和 Flutter 端共享。';
+  } else if (!canUseWeChatLogin()) {
+    detail = '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。当前先用手机号验证码登录，后续再开放微信入口。';
   }
 
   return {
@@ -673,6 +689,9 @@ function getCloudStatus() {
     isBusy: !!syncInFlight || !!signInInFlight,
     actionLabel: primaryActionLabel,
     primaryActionLabel,
+    canUseWeChatLogin: canUseWeChatLogin(),
+    shouldShowPrimaryAction:
+      isSignedIn || cloudConfig.isDevLoginEnabled() || canUseWeChatLogin(),
     secondaryActionLabel:
       !isSignedIn && !cloudConfig.isDevLoginEnabled() ? '手机号验证码登录' : '',
     headline,
@@ -683,7 +702,11 @@ function getCloudStatus() {
         : [],
     maskedPhone,
     canLinkPhone: isSignedIn && !hasPhone && !cloudConfig.isDevLoginEnabled(),
-    canLinkWeChat: isSignedIn && !hasWeChat && !cloudConfig.isDevLoginEnabled(),
+    canLinkWeChat:
+      isSignedIn &&
+      !hasWeChat &&
+      !cloudConfig.isDevLoginEnabled() &&
+      canUseWeChatLogin(),
     hasPhone,
     hasWeChat,
   };
@@ -692,6 +715,10 @@ function getCloudStatus() {
 async function signInToCloud() {
   if (signInInFlight) {
     return signInInFlight;
+  }
+
+  if (!cloudConfig.isDevLoginEnabled() && !canUseWeChatLogin()) {
+    throw new Error('当前小程序暂未开放微信登录入口，请先使用手机号验证码登录。');
   }
 
   signInInFlight = (async () => {
@@ -856,6 +883,7 @@ module.exports = {
   getStats,
   getTaskSections,
   getTimelineEntries,
+  canUseWeChatLogin,
   isCloudConfigured,
   isSignedInToCloud,
   linkPhoneToCloud,

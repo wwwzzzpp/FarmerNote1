@@ -61,13 +61,19 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 这会启用一个仅用于开发联调的 `auth-dev-login`。小程序和 Flutter 只要使用同一个 `debug key`，就会同步到同一个 Supabase 测试用户。
 
-如果你已经配好了本机的微信环境和阿里云短信配置，本地联调默认会直接走和线上一致的微信登录、手机号验证码登录，不会因为函数地址是 `http://` 就自动切到临时登录。
+如果你已经配好了本机的微信环境和阿里云短信配置，本地联调默认不会自动切到临时登录。但当前仓库里 Flutter 和小程序的微信登录页面入口都默认是关闭的，需要你在对应配置里手动打开后才会显示。
 
 如果你要调整接口防刷阈值，也可以在这里改：
 
 ```text
 FARMERNOTE_USER_RATE_LIMIT_PER_MINUTE=30
 FARMERNOTE_IP_RATE_LIMIT_PER_MINUTE=30
+```
+
+如果你想重新打开小程序微信登录页面入口，可以在 [cloud-config.js](/Users/wzp/Documents/GitHub/FarmerNote1/miniprogram/utils/cloud-config.js) 里改：
+
+```js
+const ENABLE_WECHAT_LOGIN = true;
 ```
 
 当前默认策略是：

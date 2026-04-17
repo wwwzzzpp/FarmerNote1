@@ -3,6 +3,9 @@ const SUPABASE_FUNCTIONS_BASE_URL = 'https://rfnjqodcpxxmxinijqcb.supabase.co/fu
 // 本机联调默认也走和线上一致的微信 + 手机号登录。
 // 只有明确想切回临时联调账号时，再手动改成 true。
 const ENABLE_DEV_LOGIN = false;
+// 小程序微信登录逻辑先保留，但页面入口默认隐藏。
+// 等后续确认微信开放平台 / unionid 链路稳定后，再手动改成 true。
+const ENABLE_WECHAT_LOGIN = false;
 const DEV_LOGIN_KEY = 'farmernote-local-shared-user';
 const DEV_LOGIN_DISPLAY_NAME = 'FarmerNote 临时联调';
 
@@ -13,6 +16,10 @@ function isConfigured() {
 
 function isDevLoginEnabled() {
   return ENABLE_DEV_LOGIN;
+}
+
+function isWeChatLoginEnabled() {
+  return ENABLE_WECHAT_LOGIN;
 }
 
 function getDevLoginKey() {
@@ -44,5 +51,6 @@ module.exports = {
   getFunctionUrl,
   getStorageOrigin,
   isDevLoginEnabled,
+  isWeChatLoginEnabled,
   isConfigured,
 };

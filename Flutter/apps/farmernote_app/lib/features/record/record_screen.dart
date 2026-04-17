@@ -634,36 +634,42 @@ class _RecordScreenState extends State<RecordScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: <Widget>[
-                        SizedBox(
-                          width: isCompact ? 150 : 168,
-                          child: FarmerButton(
-                            label: widget.controller.cloudPrimaryActionLabel,
-                            loading:
-                                widget.controller.isSyncing ||
-                                widget.controller.isAuthenticating,
-                            onPressed:
-                                widget.controller.canTriggerPrimaryCloudAction
-                                ? _handleCloudPrimaryAction
-                                : null,
-                          ),
-                        ),
-                        if (widget.controller.canLinkWeChat)
-                          SizedBox(
-                            width: isCompact ? 126 : 138,
-                            child: FarmerButton(
-                              label: '绑定微信',
-                              tone: FarmerButtonTone.ghost,
-                              small: true,
-                              loading: widget.controller.isAuthenticating,
-                              onPressed: _handleLinkWeChat,
+                    if (widget.controller.shouldShowPrimaryCloudButton ||
+                        widget.controller.canLinkWeChat)
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: <Widget>[
+                          if (widget.controller.shouldShowPrimaryCloudButton)
+                            SizedBox(
+                              width: isCompact ? 150 : 168,
+                              child: FarmerButton(
+                                label:
+                                    widget.controller.cloudPrimaryActionLabel,
+                                loading:
+                                    widget.controller.isSyncing ||
+                                    widget.controller.isAuthenticating,
+                                onPressed:
+                                    widget
+                                        .controller
+                                        .canTriggerPrimaryCloudAction
+                                    ? _handleCloudPrimaryAction
+                                    : null,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                          if (widget.controller.canLinkWeChat)
+                            SizedBox(
+                              width: isCompact ? 126 : 138,
+                              child: FarmerButton(
+                                label: '绑定微信',
+                                tone: FarmerButtonTone.ghost,
+                                small: true,
+                                loading: widget.controller.isAuthenticating,
+                                onPressed: _handleLinkWeChat,
+                              ),
+                            ),
+                        ],
+                      ),
                     if (widget.controller.shouldShowPhoneAuthPanel) ...<Widget>[
                       const SizedBox(height: 16),
                       Container(

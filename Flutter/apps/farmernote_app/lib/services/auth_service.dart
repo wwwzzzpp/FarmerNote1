@@ -30,6 +30,7 @@ class AuthService {
   bool _registered = false;
 
   bool get canUseWeChatAuth =>
+      CloudConfig.isFlutterWeChatLoginEnabled &&
       CloudConfig.isFlutterWeChatConfigured &&
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -151,6 +152,13 @@ class AuthService {
   }
 
   void _ensureWeChatConfigured() {
+    if (!CloudConfig.isFlutterWeChatLoginEnabled) {
+      throw const AuthServiceException(
+        'wechat_login_disabled',
+        '当前构建暂未开放 Flutter 微信登录入口，请先使用手机号验证码登录。',
+      );
+    }
+
     if (!CloudConfig.isFlutterWeChatConfigured) {
       throw const AuthServiceException(
         'wechat_not_configured',

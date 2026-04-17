@@ -49,7 +49,7 @@ Page({
       isConfigured: false,
       isSignedIn: false,
       isBusy: false,
-      actionLabel: '微信登录',
+      actionLabel: '',
       headline: '当前处于本机模式',
       detail: '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。',
     },
