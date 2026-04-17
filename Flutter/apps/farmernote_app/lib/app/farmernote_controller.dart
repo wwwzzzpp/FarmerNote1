@@ -72,12 +72,26 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   bool get isCloudConfigured => CloudConfig.isSupabaseConfigured;
   bool get isDevLoginEnabled => CloudConfig.isDevLoginEnabled;
   bool get isSignedIn => _authSession != null;
+  bool get canUseWeChatLogin => _authService.canUseWeChatAuth;
+  bool get hasLinkedPhone => _authSession?.hasPhoneLinked ?? false;
+  bool get hasLinkedWeChat => _authSession?.hasWeChatLinked ?? false;
+  String get maskedPhone => _authSession?.userProfile.maskedPhone ?? '';
+  bool get canLinkPhone => isSignedIn && !hasLinkedPhone && !isDevLoginEnabled;
+  bool get canLinkWeChat =>
+      isSignedIn && !hasLinkedWeChat && !isDevLoginEnabled && canUseWeChatLogin;
+  bool get shouldShowPhoneAuthPanel =>
+      isCloudConfigured && !isDevLoginEnabled && (!isSignedIn || canLinkPhone);
+  bool get shouldShowPrimaryCloudButton =>
+      isSignedIn || isDevLoginEnabled || canUseWeChatLogin;
+  bool get canTriggerPrimaryCloudAction =>
+      isCloudConfigured &&
+      (isSignedIn || isDevLoginEnabled || canUseWeChatLogin);
   int get selectedTabIndex => _selectedTabIndex;
   String get focusTaskId => _focusTaskId;
   int get pendingCloudChangeCount => _pendingMutations.length;
   AuthSession? get authSession => _authSession;
 
-  String get cloudActionLabel {
+  String get cloudPrimaryActionLabel {
     if (_isAuthenticating) {
       return '登录中';
     }
@@ -87,7 +101,10 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     if (isSignedIn) {
       return pendingCloudChangeCount > 0 ? '立即同步' : '检查云端更新';
     }
-    return isDevLoginEnabled ? '临时登录' : '微信登录';
+    if (isDevLoginEnabled) {
+      return '临时登录';
+    }
+    return canUseWeChatLogin ? '微信登录' : '当前平台用手机号';
   }
 
   String get cloudStatusHeadline {
@@ -95,16 +112,29 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       return '当前还没接入云端环境';
     }
     if (_isAuthenticating) {
-      return isDevLoginEnabled ? '正在接入临时联调账号' : '正在通过微信登录云端';
+      return isDevLoginEnabled
+          ? '正在接入临时联调账号'
+          : canUseWeChatLogin
+          ? '正在通过微信登录云端'
+          : '正在登录云端';
     }
     if (_isSyncing) {
       return '正在同步 FarmerNote 云端数据';
     }
     if (isSignedIn) {
       final displayName = _authSession!.userProfile.displayName.trim();
-      return displayName.isEmpty ? '已登录云端账号' : '已登录 $displayName';
+      if (displayName.isNotEmpty) {
+        return '已登录 $displayName';
+      }
+      if (maskedPhone.isNotEmpty) {
+        return '已登录 $maskedPhone';
+      }
+      return '已登录云端账号';
     }
-    return isDevLoginEnabled ? '当前可用临时联调登录' : '当前处于本机模式';
+    if (isDevLoginEnabled) {
+      return '当前可用临时联调登录';
+    }
+    return canUseWeChatLogin ? '当前处于本机模式' : '当前平台优先使用手机号登录';
   }
 
   String get cloudStatusDetail {
@@ -117,7 +147,17 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     if (!isSignedIn) {
       return isDevLoginEnabled
           ? '当前会走临时联调账号登录。只要小程序和 Flutter 使用同一个 debug key，就会同步到同一个 Supabase 测试用户。'
-          : '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。';
+          : canUseWeChatLogin
+          ? '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。微信登录是主入口，手机号验证码登录也可直接进入同一个云端账号。'
+          : '当前平台先用手机号验证码登录；登录后，记录、图片、时间线和待办才会开始跨端同步。';
+    }
+    if (!hasLinkedPhone) {
+      return '当前账号已接入云端，但还没绑定手机号。补上手机号后，小程序和 Flutter 都能用微信或验证码进入同一个账号。';
+    }
+    if (!hasLinkedWeChat) {
+      return canUseWeChatLogin
+          ? '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进入同一个账号。'
+          : '当前账号已绑定手机号。等移动端微信登录入口重新开放后，再补绑微信即可。';
     }
     if (pendingCloudChangeCount > 0) {
       return '还有 $pendingCloudChangeCount 条新变更待上传。当前版本只同步新版产生的数据，不会自动迁移旧本地记录。';
@@ -437,6 +477,119 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     } catch (error) {
       _cloudError = _humanizeCloudError(error);
       notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendPhoneCode(String phone) async {
+    if (_isAuthenticating) {
+      return;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      await _authService.sendPhoneCode(phone);
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInWithPhone({
+    required String phone,
+    required String code,
+  }) async {
+    if (_isAuthenticating) {
+      return;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      final session = await _authService.signInWithPhone(
+        phone: phone,
+        code: code,
+      );
+      await _applyState(
+        _currentState.copyWith(authSession: session),
+        shouldNotify: false,
+      );
+      _lastSyncedAt = null;
+      await syncNow();
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> linkPhone({required String phone, required String code}) async {
+    if (_isAuthenticating || _authSession == null) {
+      return;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      final session = await _authService.linkPhone(
+        session: _authSession!,
+        phone: phone,
+        code: code,
+      );
+      await _applyState(
+        _currentState.copyWith(authSession: session),
+        shouldNotify: false,
+      );
+      _lastSyncedAt = null;
+      await syncNow();
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> linkWeChat() async {
+    if (_isAuthenticating || _authSession == null) {
+      return;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      final session = await _authService.linkWeChat(session: _authSession!);
+      await _applyState(
+        _currentState.copyWith(authSession: session),
+        shouldNotify: false,
+      );
+      _lastSyncedAt = null;
+      await syncNow();
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
     } finally {
       _isAuthenticating = false;
       notifyListeners();

@@ -5,7 +5,7 @@
 - `miniprogram/`
 - `Flutter/apps/farmernote_app/`
 
-提供统一的账号、数据同步、图片对象存储能力。
+提供统一的账号、双通道登录绑定、数据同步、图片对象存储能力。
 
 ## 目录结构
 
@@ -17,6 +17,10 @@ supabase/
     _shared/
     auth-dev-login/
     auth-wechat-login/
+    auth-phone-send-code/
+    auth-phone-login/
+    auth-link-phone/
+    auth-link-wechat/
     auth-refresh/
     sync-push/
     sync-pull/
@@ -64,6 +68,22 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 
 ## 本地初始化
 
+这次新增的手机号验证码链路已经改成服务端自管验证码，并通过阿里云短信发送。开始联调前，记得先在 `.env.local` 或生产 secrets 中补齐下面这些变量：
+
+- `FARMERNOTE_PHONE_CODE_SECRET`
+- `ALIYUN_SMS_ACCESS_KEY_ID`
+- `ALIYUN_SMS_ACCESS_KEY_SECRET`
+- `ALIYUN_SMS_SIGN_NAME`
+- `ALIYUN_SMS_TEMPLATE_CODE`
+
+缺少这些配置时：
+
+- `auth-phone-send-code`
+- `auth-phone-login`
+- `auth-link-phone`
+
+都会因为短信能力未就绪而失败。
+
 如果本机已安装 Supabase CLI，可以在仓库根目录执行：
 
 ```bash
@@ -80,6 +100,8 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 ```
 
 这样小程序和 Flutter 只要使用同一个 `debug key`，就会落到同一个 Supabase 测试账号上。
+
+如果你已经配好了本地微信环境和阿里云短信环境，本地联调默认不会自动切到临时登录，而是继续走和线上一致的微信 + 手机号双通道登录。
 
 ## 限流防护
 
@@ -125,6 +147,10 @@ supabase link --project-ref <your-project-ref>
 supabase secrets set --env-file supabase/.env.production
 supabase db push
 supabase functions deploy auth-wechat-login --no-verify-jwt
+supabase functions deploy auth-phone-send-code --no-verify-jwt
+supabase functions deploy auth-phone-login --no-verify-jwt
+supabase functions deploy auth-link-phone --no-verify-jwt
+supabase functions deploy auth-link-wechat --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
@@ -164,7 +190,11 @@ https://<project-ref>.supabase.co
 
 客户端不会直连数据库。所有请求都走 Edge Functions。
 
-- 登录：`auth-wechat-login`
+- 微信登录：`auth-wechat-login`
+- 发送手机验证码：`auth-phone-send-code`
+- 手机号登录：`auth-phone-login`
+- 绑定手机号：`auth-link-phone`
+- 绑定微信：`auth-link-wechat`
 - 临时联调登录：`auth-dev-login`
 - 刷新令牌：`auth-refresh`
 - 数据 push：`sync-push`
@@ -183,3 +213,4 @@ Authorization: Bearer <accessToken>
 - 同步只针对新版本产生的新数据
 - 历史本地旧数据不会自动迁移到云端
 - 系统日历仍然是设备本地副作用，不参与云同步
+- 手机号验证码现在由 Edge Functions 自己校验并通过阿里云短信发送

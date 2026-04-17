@@ -125,16 +125,17 @@ Flutter 客户端通过 `dart-define` 读取云端参数，代码入口在：
 
 [`cloud_config.dart`](/Users/wzp/Documents/GitHub/FarmerNote1/Flutter/apps/farmernote_app/lib/config/cloud_config.dart)
 
-你至少要传这两个：
+如果你当前只是准备先上架移动端，只需要先传云端地址，微信登录入口默认是关闭的：
 
 ```bash
 --dart-define=FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL=https://<project-ref>.supabase.co/functions/v1
---dart-define=FARMERNOTE_FLUTTER_WECHAT_APP_ID=你的开放平台AppID
 ```
 
-iOS 如果用了微信登录，还要再传：
+等应用上架完成、并且拿到微信开放平台移动应用资质后，再打开 Flutter 微信登录入口，并补这几个参数：
 
 ```bash
+--dart-define=FARMERNOTE_ENABLE_FLUTTER_WECHAT_LOGIN=true
+--dart-define=FARMERNOTE_FLUTTER_WECHAT_APP_ID=你的开放平台AppID
 --dart-define=FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK=https://你的-universal-link/
 ```
 
@@ -143,6 +144,7 @@ Android 真机调试示例：
 ```bash
 flutter run -d <device-id> \
   --dart-define=FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL=https://<project-ref>.supabase.co/functions/v1 \
+  --dart-define=FARMERNOTE_ENABLE_FLUTTER_WECHAT_LOGIN=true \
   --dart-define=FARMERNOTE_FLUTTER_WECHAT_APP_ID=wx1234567890abcdef \
   --dart-define=FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK=https://your.domain.com/app/
 ```

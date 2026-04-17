@@ -4,7 +4,11 @@ class CloudConfig {
   );
   static const String devLoginMode = String.fromEnvironment(
     'FARMERNOTE_ENABLE_DEV_LOGIN',
-    defaultValue: 'auto',
+    defaultValue: 'false',
+  );
+  static const String flutterWeChatLoginMode = String.fromEnvironment(
+    'FARMERNOTE_ENABLE_FLUTTER_WECHAT_LOGIN',
+    defaultValue: 'false',
   );
   static const String devLoginKey = String.fromEnvironment(
     'FARMERNOTE_DEV_LOGIN_KEY',
@@ -31,10 +35,21 @@ class CloudConfig {
     if (normalizedMode == 'false' || normalizedMode == '0') {
       return false;
     }
-    return supabaseFunctionsBaseUrl.startsWith('http://');
+    return false;
   }
 
   static bool get isFlutterWeChatConfigured => flutterWeChatAppId.isNotEmpty;
+
+  static bool get isFlutterWeChatLoginEnabled {
+    final normalizedMode = flutterWeChatLoginMode.trim().toLowerCase();
+    if (normalizedMode == 'true' || normalizedMode == '1') {
+      return true;
+    }
+    if (normalizedMode == 'false' || normalizedMode == '0') {
+      return false;
+    }
+    return false;
+  }
 
   static Uri functionUri(String endpoint) {
     final base = supabaseFunctionsBaseUrl.endsWith('/')

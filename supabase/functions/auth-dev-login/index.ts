@@ -1,4 +1,4 @@
-import { createSession, ensureFarmerUser } from "../_shared/auth.ts";
+import { createSession, signInWithWeChatIdentity } from "../_shared/auth.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { getBooleanEnv, getOptionalEnv } from "../_shared/env.ts";
 import { enforceIpRateLimit } from "../_shared/rate-limit.ts";
@@ -77,14 +77,12 @@ Deno.serve(async (request) => {
       );
     }
 
-    const userId = await ensureFarmerUser({
+    const userId = await signInWithWeChatIdentity({
       unionId: `dev_union_${normalizedKey}`,
-      miniOpenId: body.platform === "mini_program"
+      platform: body.platform,
+      openId: body.platform === "mini_program"
         ? `dev_mini_${normalizedKey}`
-        : "",
-      appOpenId: body.platform === "flutter_app"
-        ? `dev_app_${normalizedKey}`
-        : "",
+        : `dev_app_${normalizedKey}`,
       displayName: String(body.displayName || "FarmerNote 临时联调"),
     });
 

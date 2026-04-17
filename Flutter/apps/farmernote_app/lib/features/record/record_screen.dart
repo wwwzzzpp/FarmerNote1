@@ -23,12 +23,16 @@ class RecordScreen extends StatefulWidget {
 
 class _RecordScreenState extends State<RecordScreen> {
   final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _phoneCodeController = TextEditingController();
   final ReminderIntentParser _parser = ReminderIntentParser();
   final MediaService _mediaService = MediaService();
 
   Timer? _analysisTimer;
+  Timer? _phoneCodeTimer;
   String _lastAcceptedNoteText = '';
   int _lastLineLimitToastAt = 0;
+  int _phoneCodeCountdown = 0;
   bool _updatingText = false;
   bool _reminderEnabled = false;
   String _reminderDate = '';
@@ -58,7 +62,10 @@ class _RecordScreenState extends State<RecordScreen> {
   @override
   void dispose() {
     _analysisTimer?.cancel();
+    _phoneCodeTimer?.cancel();
     _noteController.dispose();
+    _phoneController.dispose();
+    _phoneCodeController.dispose();
     super.dispose();
   }
 
@@ -432,6 +439,115 @@ class _RecordScreenState extends State<RecordScreen> {
     }
   }
 
+  void _startPhoneCodeCountdown() {
+    _phoneCodeTimer?.cancel();
+    setState(() {
+      _phoneCodeCountdown = 60;
+    });
+
+    _phoneCodeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_phoneCodeCountdown <= 1) {
+        timer.cancel();
+        setState(() {
+          _phoneCodeCountdown = 0;
+        });
+        return;
+      }
+
+      setState(() {
+        _phoneCodeCountdown -= 1;
+      });
+    });
+  }
+
+  Future<void> _handleCloudPrimaryAction() async {
+    if (!widget.controller.canTriggerPrimaryCloudAction) {
+      return;
+    }
+
+    try {
+      if (widget.controller.isSignedIn) {
+        await widget.controller.syncNow();
+      } else {
+        await widget.controller.signInToCloud();
+        if (mounted) {
+          showAppSnackBar(context, '已登录云端');
+        }
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(context, widget.controller.cloudStatusDetail);
+    }
+  }
+
+  Future<void> _handleSendPhoneCode() async {
+    if (_phoneCodeCountdown > 0) {
+      return;
+    }
+
+    try {
+      await widget.controller.sendPhoneCode(_phoneController.text);
+      _startPhoneCodeCountdown();
+      if (mounted) {
+        showAppSnackBar(context, '验证码已发送');
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(context, widget.controller.cloudStatusDetail);
+    }
+  }
+
+  Future<void> _handlePhoneSubmit() async {
+    try {
+      if (widget.controller.isSignedIn) {
+        await widget.controller.linkPhone(
+          phone: _phoneController.text,
+          code: _phoneCodeController.text,
+        );
+        _phoneCodeController.clear();
+        if (mounted) {
+          showAppSnackBar(context, '手机号已绑定');
+        }
+      } else {
+        await widget.controller.signInWithPhone(
+          phone: _phoneController.text,
+          code: _phoneCodeController.text,
+        );
+        _phoneCodeController.clear();
+        if (mounted) {
+          showAppSnackBar(context, '已登录云端');
+        }
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(context, widget.controller.cloudStatusDetail);
+    }
+  }
+
+  Future<void> _handleLinkWeChat() async {
+    try {
+      await widget.controller.linkWeChat();
+      if (mounted) {
+        showAppSnackBar(context, '微信已绑定');
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(context, widget.controller.cloudStatusDetail);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final stats = widget.controller.stats;
@@ -518,27 +634,172 @@ class _RecordScreenState extends State<RecordScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        width: isCompact ? 132 : 152,
-                        child: FarmerButton(
-                          label: widget.controller.cloudActionLabel,
-                          loading:
-                              widget.controller.isSyncing ||
-                              widget.controller.isAuthenticating,
-                          onPressed: widget.controller.isCloudConfigured
-                              ? () async {
-                                  if (widget.controller.isSignedIn) {
-                                    await widget.controller.syncNow();
-                                  } else {
-                                    await widget.controller.signInToCloud();
-                                  }
-                                }
-                              : null,
+                    if (widget.controller.shouldShowPrimaryCloudButton ||
+                        widget.controller.canLinkWeChat)
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: <Widget>[
+                          if (widget.controller.shouldShowPrimaryCloudButton)
+                            SizedBox(
+                              width: isCompact ? 150 : 168,
+                              child: FarmerButton(
+                                label:
+                                    widget.controller.cloudPrimaryActionLabel,
+                                loading:
+                                    widget.controller.isSyncing ||
+                                    widget.controller.isAuthenticating,
+                                onPressed:
+                                    widget
+                                        .controller
+                                        .canTriggerPrimaryCloudAction
+                                    ? _handleCloudPrimaryAction
+                                    : null,
+                              ),
+                            ),
+                          if (widget.controller.canLinkWeChat)
+                            SizedBox(
+                              width: isCompact ? 126 : 138,
+                              child: FarmerButton(
+                                label: '绑定微信',
+                                tone: FarmerButtonTone.ghost,
+                                small: true,
+                                loading: widget.controller.isAuthenticating,
+                                onPressed: _handleLinkWeChat,
+                              ),
+                            ),
+                        ],
+                      ),
+                    if (widget.controller.shouldShowPhoneAuthPanel) ...<Widget>[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3EFE4),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFD8CFBA)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            TextField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                hintText: '输入中国大陆手机号，例如 13800138000',
+                                filled: true,
+                                fillColor: Color(0xFFFAF6ED),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(16),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Color(0xFFD6CCB5),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(16),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Color(0xFFD6CCB5),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(16),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: TextField(
+                                    controller: _phoneCodeController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      hintText: '输入验证码',
+                                      filled: true,
+                                      fillColor: Color(0xFFFAF6ED),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(16),
+                                        ),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFFD6CCB5),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(16),
+                                        ),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFFD6CCB5),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(16),
+                                        ),
+                                        borderSide: BorderSide(
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                SizedBox(
+                                  width: isCompact ? 112 : 126,
+                                  child: FarmerButton(
+                                    label: _phoneCodeCountdown > 0
+                                        ? '$_phoneCodeCountdown 秒'
+                                        : '发送验证码',
+                                    tone: FarmerButtonTone.ghost,
+                                    small: true,
+                                    loading:
+                                        widget.controller.isAuthenticating &&
+                                        _phoneCodeCountdown == 0,
+                                    onPressed:
+                                        (widget.controller.isAuthenticating ||
+                                            _phoneCodeCountdown > 0)
+                                        ? null
+                                        : _handleSendPhoneCode,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FarmerButton(
+                                label: widget.controller.canLinkPhone
+                                    ? '绑定手机号'
+                                    : '手机号验证码登录',
+                                tone: FarmerButtonTone.secondary,
+                                loading: widget.controller.isAuthenticating,
+                                onPressed: widget.controller.isAuthenticating
+                                    ? null
+                                    : _handlePhoneSubmit,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

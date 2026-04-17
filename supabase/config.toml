@@ -30,6 +30,18 @@ inspector_port = 8083
 [functions.auth-wechat-login]
 verify_jwt = false
 
+[functions.auth-phone-send-code]
+verify_jwt = false
+
+[functions.auth-phone-login]
+verify_jwt = false
+
+[functions.auth-link-phone]
+verify_jwt = false
+
+[functions.auth-link-wechat]
+verify_jwt = false
+
 [functions.auth-dev-login]
 verify_jwt = false
 
