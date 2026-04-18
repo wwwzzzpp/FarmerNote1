@@ -156,6 +156,41 @@ cp dart_defines.example.json dart_defines.local.json
 flutter run -d <device-id> --dart-define-from-file=dart_defines.local.json
 ```
 
+### Git 共享策略
+
+为了让 macOS 和 Windows 上的 Android Studio / Flutter 调试行为尽量一致，建议把运行配置分成“共享到 Git”和“仅本机保留”两类：
+
+共享到 Git：
+
+- `dart_defines.test.json`
+- `dart_defines.prod.json`
+- `.idea/runConfigurations/main_dart.xml`
+
+仅本机保留：
+
+- `dart_defines.local.json`
+- `dart_defines.lock.json`
+
+这样做的目的：
+
+- 团队或多台电脑都能直接拿到测试环境和生产环境配置
+- Android Studio 的默认 `Run main.dart` 会走仓库里共享的测试环境参数
+- 本机局域网地址、临时实验配置不会污染 Git 历史
+
+如果你在另一台 Windows 电脑上调试，优先直接使用：
+
+```bash
+flutter run --dart-define-from-file=dart_defines.test.json
+```
+
+如果要调本地 Supabase，再在那台机器上单独复制一份：
+
+```bash
+copy dart_defines.example.json dart_defines.local.json
+```
+
+然后把 `dart_defines.local.json` 改成那台机器自己的局域网或本地参数即可。
+
 如果你现在只是要先验证 Supabase 同步，不等微信认证，也可以先打开临时联调登录：
 
 ```bash
