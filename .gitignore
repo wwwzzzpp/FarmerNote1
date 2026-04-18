@@ -50,4 +50,5 @@ miniprogram/project.private.config.json
 /Flutter/apps/farmernote_app/android/.gradle-user-home
 
 supabase/.env.local
+supabase/.env.test
 supabase/.env.production

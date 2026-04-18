@@ -1166,28 +1166,36 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: isCompact ? 12 : 14,
-          vertical: isCompact ? 10 : 12,
+          vertical: isCompact ? 9 : 10,
         ),
         decoration: BoxDecoration(
           color: AppColors.heroStat,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0xFFD0C6AB)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.ideographic,
           children: <Widget>[
             Text(
               value,
               style: TextStyle(
-                fontSize: isCompact ? 20 : 22,
+                fontSize: isCompact ? 19 : 20,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF504B38),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B654F)),
+            SizedBox(width: isCompact ? 4 : 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isCompact ? 11 : 12,
+                  color: const Color(0xFF6B654F),
+                ),
+              ),
             ),
           ],
         ),

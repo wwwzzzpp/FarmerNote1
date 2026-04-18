@@ -106,10 +106,12 @@ button::after {
 
 .stat-card {
   flex: 1;
+  display: flex;
+  align-items: baseline;
   border-radius: 24rpx;
   background: #e7e0ca;
   border: 1px solid #d0c6ab;
-  padding: 22rpx 18rpx;
+  padding: 16rpx 18rpx;
   margin-right: 16rpx;
 }
 
@@ -127,8 +129,9 @@ button::after {
 
 .stat-label {
   display: block;
-  margin-top: 8rpx;
+  margin-left: 8rpx;
   font-size: 22rpx;
+  line-height: 1.2;
   color: #6b654f;
 }
 

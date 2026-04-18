@@ -1,0 +1,9 @@
+{
+  "FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL": "https://gjxiklbnikvkzxtfayui.supabase.co/functions/v1",
+  "FARMERNOTE_ENABLE_DEV_LOGIN": "false",
+  "FARMERNOTE_ENABLE_FLUTTER_WECHAT_LOGIN": "false",
+  "FARMERNOTE_DEV_LOGIN_KEY": "farmernote-local-shared-user",
+  "FARMERNOTE_DEV_LOGIN_DISPLAY_NAME": "FarmerNote 临时联调",
+  "FARMERNOTE_FLUTTER_WECHAT_APP_ID": "wx_your_open_platform_app_id",
+  "FARMERNOTE_FLUTTER_WECHAT_UNIVERSAL_LINK": "https://your.domain.com/wechat/"
+}

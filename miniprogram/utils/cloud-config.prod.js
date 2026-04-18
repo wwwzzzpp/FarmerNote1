@@ -1,11 +1,9 @@
 const SUPABASE_FUNCTIONS_BASE_URL =
-  'https://gjxiklbnikvkzxtfayui.supabase.co/functions/v1';
-// 当前默认切到测试环境，避免本地开发误连生产数据。
+  'https://rfnjqodcpxxmxinijqcb.supabase.co/functions/v1';
 const ENABLE_DEV_LOGIN = false;
 const ENABLE_WECHAT_LOGIN = false;
 const DEV_LOGIN_KEY = 'farmernote-local-shared-user';
 const DEV_LOGIN_DISPLAY_NAME = 'FarmerNote 临时联调';
-
 
 function isConfigured() {
   return !!SUPABASE_FUNCTIONS_BASE_URL;
