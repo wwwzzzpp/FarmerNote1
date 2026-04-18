@@ -1,6 +1,6 @@
 {
-    "name": "farmernote_app",
-    "short_name": "farmernote_app",
+    "name": "初芽巡田",
+    "short_name": "初芽巡田",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

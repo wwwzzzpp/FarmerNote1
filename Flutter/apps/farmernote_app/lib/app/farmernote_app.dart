@@ -18,7 +18,7 @@ class FarmerNoteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'FarmerNote',
+      title: '初芽巡田',
       theme: buildAppTheme(),
       builder: (context, child) {
         if (child == null) {

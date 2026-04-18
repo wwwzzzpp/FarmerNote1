@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
     <application
-        android:label="farmernote_app"
+        android:label="初芽巡田"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
