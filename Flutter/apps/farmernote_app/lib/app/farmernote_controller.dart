@@ -60,6 +60,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   bool _isReady = false;
   bool _isSyncing = false;
   bool _isAuthenticating = false;
+  bool _isInitialCloudBootstrapInFlight = false;
+  bool _hasCompletedInitialCloudBootstrap = false;
   int _lastSyncedVersion = 0;
   int _selectedTabIndex = 0;
   String _focusTaskId = '';
@@ -90,6 +92,18 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   String get focusTaskId => _focusTaskId;
   int get pendingCloudChangeCount => _pendingMutations.length;
   AuthSession? get authSession => _authSession;
+  bool get isTimelineInitialLoading =>
+      _isInitialCloudBootstrapInFlight &&
+      !_hasCompletedInitialCloudBootstrap &&
+      isSignedIn &&
+      timelineEntries.isEmpty;
+  bool get isTasksInitialLoading =>
+      _isInitialCloudBootstrapInFlight &&
+      !_hasCompletedInitialCloudBootstrap &&
+      isSignedIn &&
+      upcomingTasks.isEmpty &&
+      overdueTasks.isEmpty &&
+      completedTasks.isEmpty;
 
   String get cloudPrimaryActionLabel {
     if (_isAuthenticating) {
@@ -185,8 +199,13 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       shouldNotify: false,
     );
     _isReady = true;
+    final shouldStartInitialCloudBootstrap = _authSession != null;
+    _isInitialCloudBootstrapInFlight = shouldStartInitialCloudBootstrap;
+    _hasCompletedInitialCloudBootstrap = !shouldStartInitialCloudBootstrap;
     notifyListeners();
-    unawaited(_syncIfPossible(silent: true));
+    if (shouldStartInitialCloudBootstrap) {
+      unawaited(_runInitialCloudBootstrap());
+    }
   }
 
   @override
@@ -597,7 +616,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> syncNow() async {
-    if (_isSyncing || _authSession == null) {
+    if (_isSyncing ||
+        _isInitialCloudBootstrapInFlight ||
+        _authSession == null) {
       return;
     }
 
@@ -623,26 +644,53 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _syncIfPossible({required bool silent}) async {
-    if (!isCloudConfigured || _authSession == null || _isSyncing) {
+    if (_authSession == null ||
+        _isSyncing ||
+        _isInitialCloudBootstrapInFlight) {
       return;
     }
 
     if (silent) {
-      try {
-        final result = await _syncService.synchronize(_currentState);
-        _lastSyncedAt = DateTime.now().toUtc();
-        await _applyState(result.state, shouldNotify: false);
-        notifyListeners();
-      } catch (error) {
-        if (await _handleInvalidSessionError(error)) {
-          return;
-        }
-        // Auto-sync failures should not interrupt local usage.
-      }
+      await _performSilentSync();
       return;
     }
 
     await syncNow();
+  }
+
+  Future<void> _runInitialCloudBootstrap() async {
+    if (_authSession == null) {
+      _isInitialCloudBootstrapInFlight = false;
+      _hasCompletedInitialCloudBootstrap = true;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      await _performSilentSync();
+    } finally {
+      _isInitialCloudBootstrapInFlight = false;
+      _hasCompletedInitialCloudBootstrap = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _performSilentSync() async {
+    if (_authSession == null || _isSyncing) {
+      return;
+    }
+
+    try {
+      final result = await _syncService.synchronize(_currentState);
+      _lastSyncedAt = DateTime.now().toUtc();
+      await _applyState(result.state, shouldNotify: false);
+      notifyListeners();
+    } catch (error) {
+      if (await _handleInvalidSessionError(error)) {
+        return;
+      }
+      // Silent sync failures should not interrupt local usage.
+    }
   }
 
   Future<CalendarSyncResult> addTaskToPhoneCalendar({

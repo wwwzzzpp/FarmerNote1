@@ -41,6 +41,8 @@ Page({
     hasUpcomingTasks: false,
     hasOverdueTasks: false,
     hasCompletedTasks: false,
+    isInitialLoading: false,
+    hasResolvedInitialLoad: false,
     focusTaskId: '',
   },
 
@@ -59,8 +61,38 @@ Page({
     wx.stopPullDownRefresh();
   },
 
+  getLocalViewState() {
+    const sections = store.getTaskSections();
+    const upcomingTasks = sections.upcomingTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
+    const overdueTasks = sections.overdueTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
+    const completedTasks = sections.completedTasks.map((task) =>
+      buildTaskViewModel(task, this.data.focusTaskId)
+    );
+    const hasTasks = upcomingTasks.length + overdueTasks.length + completedTasks.length > 0;
+
+    return {
+      upcomingTasks,
+      overdueTasks,
+      completedTasks,
+      hasTasks,
+      hasUpcomingTasks: upcomingTasks.length > 0,
+      hasOverdueTasks: overdueTasks.length > 0,
+      hasCompletedTasks: completedTasks.length > 0,
+    };
+  },
+
   async refreshPage() {
-    if (store.isSignedInToCloud()) {
+    const isSignedIn = store.isSignedInToCloud();
+    const localViewState = this.getLocalViewState();
+    const shouldShowInitialLoading =
+      !this.data.hasResolvedInitialLoad && !localViewState.hasTasks && isSignedIn;
+
+    this.setData({
+      ...localViewState,
+      isInitialLoading: shouldShowInitialLoading,
+    });
+
+    if (isSignedIn) {
       try {
         await store.syncNow();
       } catch (_) {
@@ -68,19 +100,10 @@ Page({
       }
     }
 
-    const sections = store.getTaskSections();
-    const upcomingTasks = sections.upcomingTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
-    const overdueTasks = sections.overdueTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
-    const completedTasks = sections.completedTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
-
     this.setData({
-      upcomingTasks,
-      overdueTasks,
-      completedTasks,
-      hasTasks: upcomingTasks.length + overdueTasks.length + completedTasks.length > 0,
-      hasUpcomingTasks: upcomingTasks.length > 0,
-      hasOverdueTasks: overdueTasks.length > 0,
-      hasCompletedTasks: completedTasks.length > 0,
+      ...this.getLocalViewState(),
+      isInitialLoading: false,
+      hasResolvedInitialLoad: true,
     });
   },
 

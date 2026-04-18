@@ -5,7 +5,13 @@
     <text class="hero-badge">共 {{entryCount}} 条</text>
   </view>
 
-  <view wx:if="{{isEmpty}}" class="section-card empty-state">
+  <view wx:if="{{isInitialLoading}}" class="section-card loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-title">正在加载时间线…</text>
+    <text class="loading-body">先把本机和云端记录对齐，请稍等。</text>
+  </view>
+
+  <view wx:elif="{{isEmpty}}" class="section-card empty-state">
     <text class="empty-title">时间线还是空的</text>
     <text class="empty-body">先去“记录”页写下第一条巡田观察，这里就会自动出现。</text>
   </view>

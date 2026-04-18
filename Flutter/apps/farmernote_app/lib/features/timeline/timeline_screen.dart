@@ -76,7 +76,12 @@ class TimelineScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              if (entries.isEmpty)
+              if (controller.isTimelineInitialLoading)
+                const LoadingStateCard(
+                  title: '正在加载时间线…',
+                  body: '先把本机和云端记录对齐，请稍等。',
+                )
+              else if (entries.isEmpty)
                 const ScreenSectionCard(
                   child: Column(
                     children: <Widget>[

@@ -62,7 +62,12 @@ class TasksScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              if (!hasTasks)
+              if (controller.isTasksInitialLoading)
+                const LoadingStateCard(
+                  title: '正在加载待办…',
+                  body: '先把本机和云端提醒对齐，请稍等。',
+                )
+              else if (!hasTasks)
                 const ScreenSectionCard(
                   child: Column(
                     children: <Widget>[

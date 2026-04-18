@@ -107,7 +107,8 @@ button::after {
 .stat-card {
   flex: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   border-radius: 24rpx;
   background: #e7e0ca;
   border: 1px solid #d0c6ab;
@@ -121,7 +122,7 @@ button::after {
 
 .stat-value {
   display: block;
-  font-size: 40rpx;
+  font-size: 34rpx;
   line-height: 1.2;
   font-weight: 700;
   color: #504b38;
@@ -130,7 +131,7 @@ button::after {
 .stat-label {
   display: block;
   margin-left: 8rpx;
-  font-size: 22rpx;
+  font-size: 28rpx;
   line-height: 1.2;
   color: #6b654f;
 }
@@ -388,6 +389,39 @@ button::after {
   text-align: center;
 }
 
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44rpx 24rpx;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 999rpx;
+  border: 6rpx solid #d6ccb5;
+  border-top-color: #7a805d;
+  animation: farmernote-spin 0.9s linear infinite;
+}
+
+.loading-title {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.loading-body {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #736d5e;
+}
+
 .empty-title {
   display: block;
   font-size: 34rpx;
@@ -416,6 +450,16 @@ button::after {
   margin-top: 8rpx;
   font-size: 24rpx;
   color: #736d5e;
+}
+
+@keyframes farmernote-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .nav-bar {

@@ -125,6 +125,8 @@ Page({
     dayGroups: [],
     entryCount: 0,
     isEmpty: true,
+    isInitialLoading: false,
+    hasResolvedInitialLoad: false,
     focusEntryId: '',
   },
 
@@ -143,8 +145,31 @@ Page({
     wx.stopPullDownRefresh();
   },
 
+  getLocalViewState() {
+    const entries = store
+      .getTimelineEntries()
+      .map((entry) => buildEntryViewModel(entry, this.data.focusEntryId));
+    const dayGroups = groupEntriesByDay(entries, new Date());
+
+    return {
+      dayGroups,
+      entryCount: entries.length,
+      isEmpty: entries.length === 0,
+    };
+  },
+
   async refreshPage() {
-    if (store.isSignedInToCloud()) {
+    const isSignedIn = store.isSignedInToCloud();
+    const localViewState = this.getLocalViewState();
+    const shouldShowInitialLoading =
+      !this.data.hasResolvedInitialLoad && localViewState.isEmpty && isSignedIn;
+
+    this.setData({
+      ...localViewState,
+      isInitialLoading: shouldShowInitialLoading,
+    });
+
+    if (isSignedIn) {
       try {
         await store.syncNow();
       } catch (_) {
@@ -152,15 +177,10 @@ Page({
       }
     }
 
-    const entries = store
-      .getTimelineEntries()
-      .map((entry) => buildEntryViewModel(entry, this.data.focusEntryId));
-    const dayGroups = groupEntriesByDay(entries, new Date());
-
     this.setData({
-      dayGroups,
-      entryCount: entries.length,
-      isEmpty: entries.length === 0,
+      ...this.getLocalViewState(),
+      isInitialLoading: false,
+      hasResolvedInitialLoad: true,
     });
   },
 

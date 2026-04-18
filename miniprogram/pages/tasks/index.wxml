@@ -4,7 +4,13 @@
     <text class="hero-title">待办提醒</text>
   </view>
 
-  <view wx:if="{{!hasTasks}}" class="section-card empty-state">
+  <view wx:if="{{isInitialLoading}}" class="section-card loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-title">正在加载待办…</text>
+    <text class="loading-body">先把本机和云端提醒对齐，请稍等。</text>
+  </view>
+
+  <view wx:elif="{{!hasTasks}}" class="section-card empty-state">
     <text class="empty-title">还没有定时任务</text>
     <text class="empty-body">在“记录”页打开提醒时间，这里就会自动接住。</text>
   </view>

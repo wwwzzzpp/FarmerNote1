@@ -17,6 +17,13 @@ function buildReminderPreview(dateValue, timeValue) {
   };
 }
 
+function getLocalRecordViewState() {
+  return {
+    stats: store.getStats(),
+    cloudStatus: store.getCloudStatus(),
+  };
+}
+
 Page({
   data: {
     noteText: '',
@@ -39,20 +46,7 @@ Page({
     phoneCode: '',
     phoneCodeCountdown: 0,
     phoneActionBusy: false,
-    stats: {
-      entryCount: 0,
-      pendingTaskCount: 0,
-      overdueTaskCount: 0,
-      completedTaskCount: 0,
-    },
-    cloudStatus: {
-      isConfigured: false,
-      isSignedIn: false,
-      isBusy: false,
-      actionLabel: '',
-      headline: '当前处于本机模式',
-      detail: '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。',
-    },
+    ...getLocalRecordViewState(),
   },
 
   onLoad() {
@@ -99,6 +93,8 @@ Page({
 
   async refreshPage(options) {
     const settings = options || {};
+    this.setData(getLocalRecordViewState());
+
     if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
         await store.syncNow();
@@ -107,10 +103,7 @@ Page({
       }
     }
 
-    this.setData({
-      stats: store.getStats(),
-      cloudStatus: store.getCloudStatus(),
-    });
+    this.setData(getLocalRecordViewState());
     this.updatePreview();
   },
 

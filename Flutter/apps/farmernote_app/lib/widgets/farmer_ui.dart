@@ -80,6 +80,53 @@ class StatusChip extends StatelessWidget {
   }
 }
 
+class LoadingStateCard extends StatelessWidget {
+  const LoadingStateCard({required this.title, required this.body, super.key});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompact = MediaQuery.sizeOf(context).width < 380;
+
+    return ScreenSectionCard(
+      child: Column(
+        children: <Widget>[
+          SizedBox(
+            width: isCompact ? 28 : 32,
+            height: isCompact ? 28 : 32,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2.4,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7A805D)),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: isCompact ? 20 : 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.7,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class FarmerButton extends StatelessWidget {
   const FarmerButton({
     required this.label,
