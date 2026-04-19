@@ -2,6 +2,7 @@ const calendarUtils = require('../../utils/calendar');
 const dateUtils = require('../../utils/date');
 const mediaUtils = require('../../utils/media');
 const reminderIntent = require('../../utils/reminder-intent');
+const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 
 function buildReminderPreview(dateValue, timeValue) {
@@ -21,6 +22,35 @@ function getLocalRecordViewState() {
   return {
     stats: store.getStats(),
     cloudStatus: store.getCloudStatus(),
+  };
+}
+
+function getEmptyRecordViewState() {
+  return {
+    stats: {
+      entryCount: 0,
+      pendingTaskCount: 0,
+      overdueTaskCount: 0,
+      completedTaskCount: 0,
+    },
+    cloudStatus: {
+      isConfigured: store.isCloudConfigured(),
+      isSignedIn: false,
+      isBusy: false,
+      actionLabel: '',
+      primaryActionLabel: '',
+      canUseWeChatLogin: false,
+      shouldShowPrimaryAction: false,
+      secondaryActionLabel: '',
+      headline: '继续使用前，请先完成协议确认',
+      detail: '只有在你同意《隐私政策》和《用户协议》后，小程序才会恢复本地状态与云端账号信息。',
+      linkedProviders: [],
+      maskedPhone: '',
+      canLinkPhone: false,
+      canLinkWeChat: false,
+      hasPhone: false,
+      hasWeChat: false,
+    },
   };
 }
 
@@ -46,7 +76,7 @@ Page({
     phoneCode: '',
     phoneCodeCountdown: 0,
     phoneActionBusy: false,
-    ...getLocalRecordViewState(),
+    ...getEmptyRecordViewState(),
   },
 
   onLoad() {
@@ -54,6 +84,9 @@ Page({
     this.phoneCodeTimer = null;
     this.lastAcceptedNoteText = '';
     this.lastLineLimitToastAt = 0;
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      return;
+    }
     this.ensureReminderDraft();
     void this.refreshPage();
   },
@@ -71,10 +104,17 @@ Page({
   },
 
   onShow() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      return;
+    }
     void this.refreshPage();
   },
 
   async onPullDownRefresh() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     await this.refreshPage();
     wx.stopPullDownRefresh();
   },
@@ -736,6 +776,12 @@ Page({
 
   goRecord() {},
 
+  goSettings() {
+    wx.navigateTo({
+      url: '/pages/settings/index',
+    });
+  },
+
   goTimeline() {
     wx.redirectTo({
       url: '/pages/timeline/index',
@@ -745,6 +791,12 @@ Page({
   goTasks() {
     wx.redirectTo({
       url: '/pages/tasks/index',
+    });
+  },
+
+  goMe() {
+    wx.redirectTo({
+      url: '/pages/settings/index',
     });
   },
 });

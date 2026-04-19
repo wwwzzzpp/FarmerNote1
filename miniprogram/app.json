@@ -1,6 +1,10 @@
 {
   "pages": [
+    "pages/launch/index",
     "pages/record/index",
+    "pages/settings/index",
+    "pages/legal/index",
+    "pages/account-deletion/index",
     "pages/timeline/index",
     "pages/tasks/index"
   ],

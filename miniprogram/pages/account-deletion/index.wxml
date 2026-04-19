@@ -1,0 +1,80 @@
+<view class="app-shell">
+  <view class="section-card hero-card deletion-hero-card">
+    <text class="hero-kicker">不可撤销操作</text>
+    <text class="hero-title deletion-hero-title">
+      提交后会立即退出登录，并进入 {{deletionWindowDays}} 天待删除窗口。
+    </text>
+    <text class="hero-body deletion-hero-body">
+      冷静期结束后，云端账号、身份绑定、记录、待办和媒体对象会被彻底删除。
+    </text>
+  </view>
+
+  <view wx:if="{{isLoadingStatus}}" class="section-card loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-title">正在检查账号状态…</text>
+    <text class="loading-body">先确认你的当前账号是否已经提交过注销申请。</text>
+  </view>
+
+  <block wx:elif="{{!account.isSignedIn}}">
+    <view class="section-card">
+      <text class="helper-text">当前还没登录云端账号。登录后，这里才会显示注销入口。</text>
+    </view>
+  </block>
+
+  <block wx:elif="{{status.status === 'pending'}}">
+    <view class="section-card">
+      <text class="section-title">账号已提交注销</text>
+      <text class="helper-text">{{status.message}}</text>
+      <text wx:if="{{scheduledForLabel}}" class="helper-text">预计彻底删除时间：{{scheduledForLabel}}</text>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="section-card">
+      <text class="section-title">确认方式</text>
+      <text class="helper-text" wx:if="{{account.hasPhone}}">
+        当前账号已绑定手机号 {{account.maskedPhone}}，请先获取注销验证码。
+      </text>
+      <text class="helper-text" wx:elif="{{account.hasWeChat}}">
+        当前账号没有绑定手机号，需要再次完成一次微信授权确认。
+      </text>
+      <text class="helper-text" wx:else>
+        当前账号没有可用的注销确认方式，请联系客服处理。
+      </text>
+    </view>
+
+    <view wx:if="{{account.hasPhone}}" class="section-card">
+      <view class="cloud-code-row">
+        <input
+          class="cloud-input cloud-input--code"
+          type="number"
+          maxlength="6"
+          placeholder="输入注销验证码"
+          value="{{code}}"
+          bindinput="handleCodeInput"
+        />
+        <button
+          class="action-button ghost-button small-button cloud-code-button"
+          bindtap="handleSendCode"
+          disabled="{{isBusy || sendCountdown > 0}}"
+        >
+          {{sendCountdown > 0 ? sendCountdown + ' 秒' : '发送验证码'}}
+        </button>
+      </view>
+      <view class="action-row action-row--single">
+        <button class="action-button danger-button" bindtap="handleConfirmPhoneDeletion" loading="{{isBusy}}">
+          提交注销申请
+        </button>
+      </view>
+    </view>
+
+    <view wx:elif="{{account.hasWeChat}}" class="section-card">
+      <text class="helper-text">点击下方按钮后，会再次拉起微信授权，用于确认本次注销申请。</text>
+      <view class="action-row action-row--single">
+        <button class="action-button danger-button" bindtap="handleConfirmWeChatDeletion" loading="{{isBusy}}">
+          使用微信确认注销
+        </button>
+      </view>
+    </view>
+  </block>
+</view>

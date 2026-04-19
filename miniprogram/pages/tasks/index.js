@@ -1,5 +1,6 @@
 const dateUtils = require('../../utils/date');
 const mediaUtils = require('../../utils/media');
+const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 
 function buildTaskViewModel(task, focusTaskId) {
@@ -53,10 +54,17 @@ Page({
   },
 
   onShow() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      return;
+    }
     void this.refreshPage();
   },
 
   async onPullDownRefresh() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     await this.refreshPage();
     wx.stopPullDownRefresh();
   },
@@ -157,4 +165,10 @@ Page({
   },
 
   goTasks() {},
+
+  goMe() {
+    wx.redirectTo({
+      url: '/pages/settings/index',
+    });
+  },
 });

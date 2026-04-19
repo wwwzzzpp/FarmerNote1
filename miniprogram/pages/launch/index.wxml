@@ -1,0 +1,42 @@
+<view class="app-shell launch-shell">
+  <view wx:if="{{isCheckingConsent}}" class="section-card loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-title">正在检查启动状态…</text>
+    <text class="loading-body">FarmerNote 会先确认你是否已经完成协议同意，再决定是否恢复本地数据。</text>
+  </view>
+
+  <block wx:else>
+    <view class="section-card hero-card launch-hero-card">
+      <text class="hero-kicker">首次启动需先完成协议确认</text>
+      <text class="hero-title launch-title">继续使用前，请先阅读《隐私政策》和《用户协议》。</text>
+      <text class="hero-body launch-body">
+        为了满足上架合规要求，在你明确同意前，小程序不会恢复本地业务状态，也不会触发云端登录、拍照或日历相关能力。
+      </text>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">你可以先查看完整说明</text>
+      <view class="action-row action-row--pair">
+        <button class="action-button secondary-button small-button" bindtap="openPrivacy">查看隐私政策</button>
+        <button class="action-button ghost-button small-button" bindtap="openTerms">查看用户协议</button>
+      </view>
+      <view class="launch-note-card">
+        <text class="launch-note-text">
+          公开官网与法律页面已经准备好，后续上架填写时可直接使用公开链接。当前支持方式仍是占位文本，正式上架前请记得替换。
+        </text>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="action-row action-row--stack">
+        <button class="action-button primary-button" bindtap="handleAccept" loading="{{isSubmitting}}">
+          同意并继续
+        </button>
+        <button class="action-button ghost-button" bindtap="handleDecline" disabled="{{isSubmitting}}">
+          不同意并退出
+        </button>
+      </view>
+      <text wx:if="{{startupError}}" class="helper-text">{{startupError}}</text>
+    </view>
+  </block>
+</view>

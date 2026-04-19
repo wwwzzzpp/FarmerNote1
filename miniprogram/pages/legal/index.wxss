@@ -1,0 +1,49 @@
+.legal-hero-card {
+  padding-top: 34rpx;
+  padding-bottom: 34rpx;
+}
+
+.legal-hero-title {
+  font-size: 44rpx;
+}
+
+.legal-hero-body {
+  font-size: 26rpx;
+  line-height: 1.8;
+}
+
+.legal-section-card {
+  overflow: hidden;
+}
+
+.legal-paragraph,
+.legal-bullet {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: #736d5e;
+}
+
+.legal-note-card {
+  margin-top: 18rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 22rpx;
+  border: 1px solid #d8cfba;
+  background: #f1ece1;
+}
+
+.legal-note-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #736d5e;
+}
+
+.legal-support-contact {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}

@@ -25,6 +25,16 @@ function getDefaultState() {
   };
 }
 
+function getEmptyAccountDeletionStatus() {
+  return {
+    status: 'none',
+    requestedAt: '',
+    scheduledFor: '',
+    confirmedBy: '',
+    message: '',
+  };
+}
+
 function sanitizeEntries(entries) {
   if (!Array.isArray(entries)) {
     return [];
@@ -272,6 +282,47 @@ function getStats() {
     pendingTaskCount: taskRecords.filter((task) => task.status === 'pending').length,
     overdueTaskCount: taskRecords.filter((task) => task.status === 'overdue').length,
     completedTaskCount: taskRecords.filter((task) => task.status === 'completed').length,
+  };
+}
+
+function getAccountProfileSummary() {
+  const state = loadState();
+  const session = state.authSession;
+  const isSignedIn = !!session;
+  const displayName =
+    session && session.userProfile ? String(session.userProfile.displayName || '').trim() : '';
+  const maskedPhone =
+    session && session.userProfile ? String(session.userProfile.maskedPhone || '').trim() : '';
+  const hasPhone = hasLinkedProvider(session, 'phone');
+  const hasWeChat = hasLinkedProvider(session, 'wechat');
+
+  let title = '当前未登录云端';
+  if (displayName) {
+    title = displayName;
+  } else if (maskedPhone) {
+    title = maskedPhone;
+  } else if (isSignedIn) {
+    title = '云端账号';
+  }
+
+  let detail = '未登录时，设置页仍可查看协议与官网地址。';
+  if (isSignedIn && hasPhone && hasWeChat) {
+    detail = '当前账号已绑定手机号和微信。';
+  } else if (isSignedIn && hasPhone) {
+    detail = '当前账号已绑定手机号，后续还可补绑微信。';
+  } else if (isSignedIn && hasWeChat) {
+    detail = '当前账号已绑定微信，后续还可补绑手机号。';
+  } else if (isSignedIn) {
+    detail = '当前账号还没有完成登录方式绑定。';
+  }
+
+  return {
+    isSignedIn,
+    title,
+    detail,
+    hasPhone,
+    hasWeChat,
+    maskedPhone,
   };
 }
 
@@ -873,12 +924,76 @@ async function syncNow() {
   }
 }
 
+async function clearAllLocalMedia(state) {
+  const localPhotoPaths = state.entries
+    .map((entry) => String(entry.localPhotoPath || '').trim())
+    .filter(Boolean);
+  const uniquePaths = [...new Set(localPhotoPaths)];
+
+  await Promise.all(
+    uniquePaths.map((filePath) =>
+      cloudMedia.removeLocalPhoto(filePath).catch(() => {})
+    )
+  );
+}
+
+async function resetAfterAccountDeletion(status) {
+  const state = loadState();
+  await clearAllLocalMedia(state);
+  persistState(getDefaultState());
+  lastSyncAt = '';
+  lastSyncError =
+    (status && status.message) || '账号已申请注销，将在 15 天内彻底删除。';
+  return getEmptyAccountDeletionStatus();
+}
+
+async function loadAccountDeletionStatus() {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    return getEmptyAccountDeletionStatus();
+  }
+
+  return cloudAuth.loadAccountDeletionStatus(state.authSession);
+}
+
+async function sendAccountDeletionPhoneCode() {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    throw new Error('当前还没有登录云端账号。');
+  }
+
+  return cloudAuth.sendAccountDeletionPhoneCode(state.authSession);
+}
+
+async function requestAccountDeletionWithPhone(code) {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    throw new Error('当前还没有登录云端账号。');
+  }
+
+  const status = await cloudAuth.requestAccountDeletionWithPhone(state.authSession, code);
+  await resetAfterAccountDeletion(status);
+  return status;
+}
+
+async function requestAccountDeletionWithWeChat() {
+  const state = loadState();
+  if (!cloudConfig.isConfigured() || !state.authSession) {
+    throw new Error('当前还没有登录云端账号。');
+  }
+
+  const status = await cloudAuth.requestAccountDeletionWithWeChat(state.authSession);
+  await resetAfterAccountDeletion(status);
+  return status;
+}
+
 module.exports = {
   STORAGE_KEY,
   completeTask,
   createEntry,
   deleteEntry,
   deleteTask,
+  getAccountProfileSummary,
   getCloudStatus,
   getStats,
   getTaskSections,
@@ -888,7 +1003,11 @@ module.exports = {
   isSignedInToCloud,
   linkPhoneToCloud,
   linkWeChatToCloud,
+  loadAccountDeletionStatus,
   loadState,
+  requestAccountDeletionWithPhone,
+  requestAccountDeletionWithWeChat,
+  sendAccountDeletionPhoneCode,
   sendPhoneCodeToCloud,
   signInToCloud,
   signInToCloudWithPhone,

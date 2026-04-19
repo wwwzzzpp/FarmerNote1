@@ -1,0 +1,55 @@
+<view class="app-shell">
+  <view class="section-card hero-card settings-hero-card">
+    <text class="hero-kicker">账号与合规</text>
+    <text class="hero-title settings-hero-title">{{account.title}}</text>
+    <text class="hero-body settings-hero-body">{{account.detail}}</text>
+  </view>
+
+  <view class="section-card">
+    <button class="settings-tile" data-type="privacy" bindtap="openLegal">
+      <view class="settings-tile-main">
+        <text class="settings-tile-title">隐私政策</text>
+        <text class="settings-tile-subtitle">查看 App、小程序和云同步服务统一隐私说明</text>
+      </view>
+      <text class="settings-tile-arrow">›</text>
+    </button>
+    <button class="settings-tile" data-type="terms" bindtap="openLegal">
+      <view class="settings-tile-main">
+        <text class="settings-tile-title">用户协议</text>
+        <text class="settings-tile-subtitle">查看服务范围、账号规则与注销机制</text>
+      </view>
+      <text class="settings-tile-arrow">›</text>
+    </button>
+    <button class="settings-tile settings-tile--last" bindtap="openAccountDeletion">
+      <view class="settings-tile-main">
+        <text class="settings-tile-title">账号注销</text>
+        <text class="settings-tile-subtitle">登录后可直接发起注销申请，并查看 15 天删除窗口说明</text>
+      </view>
+      <text class="settings-tile-arrow">›</text>
+    </button>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">官网与公开链接</text>
+    <text class="helper-text">{{websiteBaseUrl}}</text>
+    <view class="action-row action-row--single">
+      <button class="action-button secondary-button small-button" bindtap="copyWebsiteUrl">复制官网地址</button>
+    </view>
+
+    <text class="section-title settings-section-title">公开支持方式</text>
+    <text class="settings-support-contact">{{supportContact}}</text>
+    <text class="helper-text">{{supportHint}}</text>
+  </view>
+
+  <view class="section-card settings-version-card">
+    <text class="section-title">当前版本</text>
+    <text class="settings-version-text">v{{appVersion}}</text>
+  </view>
+
+  <view class="nav-bar">
+    <button class="nav-item" bindtap="goRecord">记录</button>
+    <button class="nav-item" bindtap="goTimeline">时间线</button>
+    <button class="nav-item" bindtap="goTasks">待办</button>
+    <button class="nav-item nav-item--active" bindtap="goMe">我</button>
+  </view>
+</view>

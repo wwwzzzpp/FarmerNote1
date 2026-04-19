@@ -24,6 +24,16 @@ function parseSession(session) {
   };
 }
 
+function parseAccountDeletionStatus(payload) {
+  return {
+    status: String((payload && payload.status) || 'none'),
+    requestedAt: String((payload && payload.requestedAt) || ''),
+    scheduledFor: String((payload && payload.scheduledFor) || ''),
+    confirmedBy: String((payload && payload.confirmedBy) || ''),
+    message: String((payload && payload.message) || ''),
+  };
+}
+
 function ensureCloudConfigured() {
   if (!cloudConfig.isConfigured()) {
     throw requestUtils.buildError(
@@ -86,6 +96,26 @@ async function postAuth(options) {
   });
 
   return parseSession(payload);
+}
+
+async function requestWithSession(options) {
+  ensureCloudConfigured();
+
+  return requestUtils.requestJson({
+    url: cloudConfig.getFunctionUrl(options.endpoint),
+    method: options.method || 'POST',
+    data: options.data,
+    header: Object.assign(
+      {
+        'Content-Type': 'application/json',
+      },
+      options.accessToken
+        ? {
+            Authorization: `Bearer ${options.accessToken}`,
+          }
+        : {}
+    ),
+  });
 }
 
 async function loginWithWeChat() {
@@ -183,6 +213,53 @@ async function refreshSession(session) {
   });
 }
 
+async function loadAccountDeletionStatus(session) {
+  const payload = await requestWithSession({
+    endpoint: 'account-deletion-status',
+    method: 'GET',
+    accessToken: session && session.accessToken,
+  });
+
+  return parseAccountDeletionStatus(payload);
+}
+
+async function sendAccountDeletionPhoneCode(session) {
+  return requestWithSession({
+    endpoint: 'account-request-deletion',
+    data: {
+      action: 'send_phone_code',
+    },
+    accessToken: session && session.accessToken,
+  });
+}
+
+async function requestAccountDeletionWithPhone(session, code) {
+  const payload = await requestWithSession({
+    endpoint: 'account-request-deletion',
+    data: {
+      action: 'confirm_phone_code',
+      code: String(code || '').trim(),
+    },
+    accessToken: session && session.accessToken,
+  });
+
+  return parseAccountDeletionStatus(payload);
+}
+
+async function requestAccountDeletionWithWeChat(session) {
+  const payload = await requestWithSession({
+    endpoint: 'account-request-deletion',
+    data: {
+      action: 'confirm_wechat',
+      platform: 'mini_program',
+      wechatCode: await requestWeChatCode(),
+    },
+    accessToken: session && session.accessToken,
+  });
+
+  return parseAccountDeletionStatus(payload);
+}
+
 function shouldRefreshSession(session) {
   if (!session || !session.accessExpiresAt) {
     return false;
@@ -220,10 +297,14 @@ module.exports = {
   isSessionInvalidError,
   linkPhone,
   linkWithWeChat,
+  loadAccountDeletionStatus,
   loginForDevelopment,
   loginWithPhone,
   loginWithWeChat,
+  requestAccountDeletionWithPhone,
+  requestAccountDeletionWithWeChat,
   refreshSession,
+  sendAccountDeletionPhoneCode,
   sendPhoneCode,
   shouldRefreshSession,
 };

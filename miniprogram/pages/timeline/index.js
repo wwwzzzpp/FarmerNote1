@@ -1,5 +1,6 @@
 const mediaUtils = require('../../utils/media');
 const dateUtils = require('../../utils/date');
+const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 
 function pad(value) {
@@ -137,10 +138,17 @@ Page({
   },
 
   onShow() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      return;
+    }
     void this.refreshPage();
   },
 
   async onPullDownRefresh() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     await this.refreshPage();
     wx.stopPullDownRefresh();
   },
@@ -232,6 +240,12 @@ Page({
   goTasks() {
     wx.redirectTo({
       url: '/pages/tasks/index',
+    });
+  },
+
+  goMe() {
+    wx.redirectTo({
+      url: '/pages/settings/index',
     });
   },
 });

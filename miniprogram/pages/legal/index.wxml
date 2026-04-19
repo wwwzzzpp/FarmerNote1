@@ -1,0 +1,41 @@
+<view class="app-shell">
+  <view class="section-card hero-card legal-hero-card">
+    <text class="hero-kicker">公开页面与小程序文案保持同源更新</text>
+    <text class="hero-title legal-hero-title">{{document.title}}</text>
+    <text class="hero-body legal-hero-body">{{document.summary}}</text>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">公开网页地址</text>
+    <text class="helper-text">{{document.publicUrl}}</text>
+    <view class="action-row action-row--single">
+      <button class="action-button secondary-button small-button" bindtap="copyPublicUrl">复制网页地址</button>
+    </view>
+  </view>
+
+  <block wx:for="{{document.sections}}" wx:key="title">
+    <view class="section-card legal-section-card">
+      <text class="section-title">{{item.title}}</text>
+
+      <block wx:for="{{item.paragraphs}}" wx:key="*this">
+        <text class="legal-paragraph">{{item}}</text>
+      </block>
+
+      <block wx:if="{{item.bullets.length}}">
+        <block wx:for="{{item.bullets}}" wx:key="*this">
+          <text class="legal-bullet">• {{item}}</text>
+        </block>
+      </block>
+
+      <view wx:if="{{item.note}}" class="legal-note-card">
+        <text class="legal-note-text">{{item.note}}</text>
+      </view>
+    </view>
+  </block>
+
+  <view class="section-card">
+    <text class="section-title">公开支持方式</text>
+    <text class="legal-support-contact">{{supportContact}}</text>
+    <text class="helper-text">{{supportHint}}</text>
+  </view>
+</view>

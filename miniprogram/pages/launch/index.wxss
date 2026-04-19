@@ -1,0 +1,32 @@
+.launch-shell {
+  padding-top: 32rpx;
+}
+
+.launch-hero-card {
+  padding-top: 34rpx;
+  padding-bottom: 34rpx;
+}
+
+.launch-title {
+  font-size: 46rpx;
+}
+
+.launch-body {
+  font-size: 26rpx;
+  line-height: 1.8;
+}
+
+.launch-note-card {
+  margin-top: 20rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 22rpx;
+  border: 1px solid #d8cfba;
+  background: #f1ece1;
+}
+
+.launch-note-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #736d5e;
+}

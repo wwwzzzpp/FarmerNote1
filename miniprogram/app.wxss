@@ -99,6 +99,18 @@ button::after {
   padding-right: 16rpx;
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #5f5948;
+}
+
 .stats-row {
   display: flex;
   margin-top: 24rpx;

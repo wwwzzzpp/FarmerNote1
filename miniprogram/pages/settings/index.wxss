@@ -1,0 +1,76 @@
+.settings-hero-card {
+  padding-top: 34rpx;
+  padding-bottom: 34rpx;
+}
+
+.settings-hero-title {
+  font-size: 44rpx;
+}
+
+.settings-hero-body {
+  font-size: 26rpx;
+  line-height: 1.8;
+}
+
+.settings-tile {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0;
+  background: transparent;
+  border-bottom: 1px solid #e5dcc8;
+}
+
+.settings-tile--last {
+  border-bottom: 0;
+}
+
+.settings-tile-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.settings-tile-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.settings-tile-subtitle {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #736d5e;
+}
+
+.settings-tile-arrow {
+  margin-left: 20rpx;
+  font-size: 38rpx;
+  color: #8b836f;
+}
+
+.settings-section-title {
+  margin-top: 26rpx;
+}
+
+.settings-support-contact {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.settings-version-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-version-text {
+  font-size: 28rpx;
+  color: #736d5e;
+}
