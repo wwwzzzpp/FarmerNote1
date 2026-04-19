@@ -22,6 +22,9 @@ supabase/
     auth-link-phone/
     auth-link-wechat/
     auth-refresh/
+    account-request-deletion/
+    account-deletion-status/
+    account-purge-due/
     sync-push/
     sync-pull/
     media-upload-ticket/
@@ -41,10 +44,22 @@ WECHAT_OPEN_APP_ID
 WECHAT_OPEN_APP_SECRET
 FARMERNOTE_ACCESS_TOKEN_TTL_SECONDS
 FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS
+FARMERNOTE_ACCOUNT_DELETION_WINDOW_DAYS
+FARMERNOTE_ACCOUNT_PURGE_TOKEN
 FARMERNOTE_USER_RATE_LIMIT_PER_MINUTE
 FARMERNOTE_IP_RATE_LIMIT_PER_MINUTE
 FARMERNOTE_ENABLE_DEV_LOGIN
 FARMERNOTE_DEV_LOGIN_KEY
+FARMERNOTE_PHONE_CODE_SECRET
+FARMERNOTE_PHONE_OTP_LENGTH
+FARMERNOTE_PHONE_OTP_TTL_SECONDS
+FARMERNOTE_PHONE_OTP_RESEND_COOLDOWN_SECONDS
+FARMERNOTE_PHONE_OTP_MAX_ATTEMPTS
+ALIYUN_SMS_ACCESS_KEY_ID
+ALIYUN_SMS_ACCESS_KEY_SECRET
+ALIYUN_SMS_SIGN_NAME
+ALIYUN_SMS_TEMPLATE_CODE
+ALIYUN_SMS_ENDPOINT
 ```
 
 推荐默认值：
@@ -52,6 +67,7 @@ FARMERNOTE_DEV_LOGIN_KEY
 ```text
 FARMERNOTE_ACCESS_TOKEN_TTL_SECONDS=86400
 FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS=2592000
+FARMERNOTE_ACCOUNT_DELETION_WINDOW_DAYS=15
 FARMERNOTE_USER_RATE_LIMIT_PER_MINUTE=30
 FARMERNOTE_IP_RATE_LIMIT_PER_MINUTE=30
 FARMERNOTE_ENABLE_DEV_LOGIN=false
@@ -71,6 +87,7 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 这次新增的手机号验证码链路已经改成服务端自管验证码，并通过阿里云短信发送。开始联调前，记得先在 `.env.local` 或生产 secrets 中补齐下面这些变量：
 
 - `FARMERNOTE_PHONE_CODE_SECRET`
+- `FARMERNOTE_ACCOUNT_PURGE_TOKEN`
 - `ALIYUN_SMS_ACCESS_KEY_ID`
 - `ALIYUN_SMS_ACCESS_KEY_SECRET`
 - `ALIYUN_SMS_SIGN_NAME`
@@ -81,6 +98,7 @@ FARMERNOTE_DEV_LOGIN_KEY=farmernote-local-shared-user
 - `auth-phone-send-code`
 - `auth-phone-login`
 - `auth-link-phone`
+- `account-request-deletion`
 
 都会因为短信能力未就绪而失败。
 
@@ -152,6 +170,9 @@ supabase functions deploy auth-phone-login --no-verify-jwt
 supabase functions deploy auth-link-phone --no-verify-jwt
 supabase functions deploy auth-link-wechat --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
+supabase functions deploy account-request-deletion --no-verify-jwt
+supabase functions deploy account-deletion-status --no-verify-jwt
+supabase functions deploy account-purge-due --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
 supabase functions deploy media-upload-ticket --no-verify-jwt
@@ -195,6 +216,8 @@ https://<project-ref>.supabase.co
 - 手机号登录：`auth-phone-login`
 - 绑定手机号：`auth-link-phone`
 - 绑定微信：`auth-link-wechat`
+- 发起账号注销：`account-request-deletion`
+- 查看注销状态：`account-deletion-status`
 - 临时联调登录：`auth-dev-login`
 - 刷新令牌：`auth-refresh`
 - 数据 push：`sync-push`
@@ -214,3 +237,4 @@ Authorization: Bearer <accessToken>
 - 历史本地旧数据不会自动迁移到云端
 - 系统日历仍然是设备本地副作用，不参与云同步
 - 手机号验证码现在由 Edge Functions 自己校验并通过阿里云短信发送
+- 账号注销当前采用 15 天待删除窗口，最终清理由 `account-purge-due` 配合 GitHub Actions 定时执行

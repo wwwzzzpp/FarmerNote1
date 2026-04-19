@@ -7,12 +7,12 @@ import '../theme/app_theme.dart';
 import '../widgets/farmer_ui.dart';
 import 'farmernote_controller.dart';
 
-class FarmerNoteApp extends StatelessWidget {
-  const FarmerNoteApp({required this.controller, super.key});
+class FarmerNoteShell extends StatelessWidget {
+  const FarmerNoteShell({required this.child, super.key});
 
   static const double _appTextScale = 0.94;
 
-  final FarmerNoteController controller;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,20 @@ class FarmerNoteApp extends StatelessWidget {
           child: child,
         );
       },
-      home: AnimatedBuilder(
+      home: child,
+    );
+  }
+}
+
+class FarmerNoteApp extends StatelessWidget {
+  const FarmerNoteApp({required this.controller, super.key});
+
+  final FarmerNoteController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return FarmerNoteShell(
+      child: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
           if (!controller.isReady) {
@@ -40,32 +53,43 @@ class FarmerNoteApp extends StatelessWidget {
             );
           }
 
-          return Scaffold(
-            body: IndexedStack(
-              index: controller.selectedTabIndex,
-              children: <Widget>[
-                RecordScreen(controller: controller),
-                TimelineScreen(controller: controller),
-                TasksScreen(controller: controller),
-              ],
-            ),
-            bottomNavigationBar: BottomPillNavigation(
-              currentIndex: controller.selectedTabIndex,
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    controller.goToRecord();
-                    break;
-                  case 1:
-                    controller.goToTimeline();
-                    break;
-                  case 2:
-                    controller.goToTasks();
-                    break;
-                }
-              },
-            ),
-          );
+          return FarmerNoteScaffold(controller: controller);
+        },
+      ),
+    );
+  }
+}
+
+class FarmerNoteScaffold extends StatelessWidget {
+  const FarmerNoteScaffold({required this.controller, super.key});
+
+  final FarmerNoteController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: controller.selectedTabIndex,
+        children: <Widget>[
+          RecordScreen(controller: controller),
+          TimelineScreen(controller: controller),
+          TasksScreen(controller: controller),
+        ],
+      ),
+      bottomNavigationBar: BottomPillNavigation(
+        currentIndex: controller.selectedTabIndex,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              controller.goToRecord();
+              break;
+            case 1:
+              controller.goToTimeline();
+              break;
+            case 2:
+              controller.goToTasks();
+              break;
+          }
         },
       ),
     );

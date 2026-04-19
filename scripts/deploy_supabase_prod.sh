@@ -39,7 +39,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-if grep -Eq 'your-project-ref|your-supabase-service-role-key|your-miniprogram-app-secret|your-open-platform-app-secret|wx_your_|your-aliyun-access-key-id|your-aliyun-access-key-secret|your-approved-sign-name|SMS_123456789|replace-with-a-long-random-secret' "$ENV_FILE"; then
+if grep -Eq 'your-project-ref|your-supabase-service-role-key|your-miniprogram-app-secret|your-open-platform-app-secret|wx_your_|your-aliyun-access-key-id|your-aliyun-access-key-secret|your-approved-sign-name|SMS_123456789|replace-with-a-long-random-secret|replace-with-an-admin-purge-token' "$ENV_FILE"; then
   echo "Error: placeholder values still exist in $ENV_FILE"
   exit 1
 fi
@@ -60,6 +60,9 @@ FUNCTIONS=(
   auth-link-phone
   auth-link-wechat
   auth-refresh
+  account-request-deletion
+  account-deletion-status
+  account-purge-due
   sync-push
   sync-pull
   media-upload-ticket

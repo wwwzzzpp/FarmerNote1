@@ -6,9 +6,11 @@ const accessTokenTtlSeconds = () =>
   getNumberEnv("FARMERNOTE_ACCESS_TOKEN_TTL_SECONDS", 60 * 60 * 24);
 const refreshTokenTtlSeconds = () =>
   getNumberEnv("FARMERNOTE_REFRESH_TOKEN_TTL_SECONDS", 60 * 60 * 24 * 30);
+const accountDeletionWindowDays = () =>
+  getNumberEnv("FARMERNOTE_ACCOUNT_DELETION_WINDOW_DAYS", 15);
 
 const userProfileSelect =
-  "id, unionid, display_name, avatar_url, farmer_user_identities(provider, identity_key)";
+  "id, unionid, display_name, avatar_url, deletion_requested_at, deletion_scheduled_for, deletion_completed_at, farmer_user_identities(provider, identity_key)";
 const sessionProfileSelect =
   `id, user_id, platform, device_id, access_expires_at, farmer_users!inner(${userProfileSelect})`;
 const refreshSessionSelect =
@@ -34,6 +36,13 @@ interface MergeSnapshot {
   hasWeChat: boolean;
 }
 
+interface AccountDeletionRow {
+  deletion_requested_at: string | null;
+  deletion_scheduled_for: string | null;
+  deletion_confirmed_by: string | null;
+  deletion_completed_at: string | null;
+}
+
 export interface FarmerUserProfile {
   id: string;
   unionid: string;
@@ -41,6 +50,14 @@ export interface FarmerUserProfile {
   avatar_url: string;
   linked_providers: LinkedProvider[];
   masked_phone: string;
+}
+
+export interface AccountDeletionStatus {
+  status: "none" | "pending";
+  requestedAt: string;
+  scheduledFor: string;
+  confirmedBy: "phone" | "wechat" | "";
+  message: string;
 }
 
 export interface AuthenticatedSession {
@@ -135,6 +152,77 @@ function normalizeProfile(value: unknown): FarmerUserProfile {
   };
 }
 
+function normalizeDeletionRow(value: unknown): AccountDeletionRow {
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      return {
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+        deletion_confirmed_by: null,
+        deletion_completed_at: null,
+      };
+    }
+    return normalizeDeletionRow(value[0]);
+  }
+
+  if (!value || typeof value !== "object") {
+    return {
+      deletion_requested_at: null,
+      deletion_scheduled_for: null,
+      deletion_confirmed_by: null,
+      deletion_completed_at: null,
+    };
+  }
+
+  const row = value as Record<string, unknown>;
+  return {
+    deletion_requested_at: row.deletion_requested_at
+      ? String(row.deletion_requested_at)
+      : null,
+    deletion_scheduled_for: row.deletion_scheduled_for
+      ? String(row.deletion_scheduled_for)
+      : null,
+    deletion_confirmed_by: row.deletion_confirmed_by
+      ? String(row.deletion_confirmed_by)
+      : null,
+    deletion_completed_at: row.deletion_completed_at
+      ? String(row.deletion_completed_at)
+      : null,
+  };
+}
+
+function isDeletionPending(value: AccountDeletionRow): boolean {
+  return !!value.deletion_requested_at &&
+    !!value.deletion_scheduled_for &&
+    !value.deletion_completed_at;
+}
+
+function buildAccountDeletionStatus(
+  value: AccountDeletionRow,
+): AccountDeletionStatus {
+  if (!isDeletionPending(value)) {
+    return {
+      status: "none",
+      requestedAt: "",
+      scheduledFor: "",
+      confirmedBy: "",
+      message: "",
+    };
+  }
+
+  return {
+    status: "pending",
+    requestedAt: value.deletion_requested_at ?? "",
+    scheduledFor: value.deletion_scheduled_for ?? "",
+    confirmedBy: value.deletion_confirmed_by === "phone" ||
+        value.deletion_confirmed_by === "wechat"
+      ? value.deletion_confirmed_by
+      : "",
+    message:
+      `账号已申请注销，将在 ${accountDeletionWindowDays()} 天内彻底删除。`,
+  };
+}
+
 function buildSessionResponse(
   profile: FarmerUserProfile,
   accessToken: string,
@@ -181,6 +269,32 @@ async function loadUserProfile(userId: string): Promise<FarmerUserProfile> {
   }
 
   return normalizeProfile(data);
+}
+
+async function loadUserDeletionRow(
+  userId: string,
+): Promise<AccountDeletionRow> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("farmer_users")
+    .select(
+      "deletion_requested_at, deletion_scheduled_for, deletion_confirmed_by, deletion_completed_at",
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw error ?? new Error("Unable to load account deletion state.");
+  }
+
+  return normalizeDeletionRow(data);
+}
+
+async function ensureUserCanCreateSession(userId: string): Promise<void> {
+  const deletion = await loadUserDeletionRow(userId);
+  if (isDeletionPending(deletion)) {
+    throw new Error(buildAccountDeletionStatus(deletion).message);
+  }
 }
 
 async function findIdentityOwner(
@@ -614,6 +728,7 @@ export async function createSession(input: {
   platform: "mini_program" | "flutter_app";
   deviceId?: string;
 }): Promise<ReturnType<typeof buildSessionResponse>> {
+  await ensureUserCanCreateSession(input.userId);
   const client = createServiceClient();
   const accessToken = issueOpaqueToken("atk");
   const refreshToken = issueOpaqueToken("rtk");
@@ -661,6 +776,102 @@ export async function deleteSessionById(sessionId: string): Promise<void> {
   }
 }
 
+export async function deleteSessionsByUserId(userId: string): Promise<void> {
+  if (!userId.trim()) {
+    return;
+  }
+
+  const client = createServiceClient();
+  const { error } = await client
+    .from("farmer_user_sessions")
+    .delete()
+    .eq("user_id", userId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function getAccountDeletionStatus(
+  userId: string,
+): Promise<AccountDeletionStatus> {
+  const deletion = await loadUserDeletionRow(userId);
+  return buildAccountDeletionStatus(deletion);
+}
+
+export async function loadBoundPhoneForUser(userId: string): Promise<string> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("farmer_user_identities")
+    .select("identity_key")
+    .eq("user_id", userId)
+    .eq("provider", "phone")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return String(data?.identity_key ?? "").trim();
+}
+
+export async function loadBoundWeChatUnionId(userId: string): Promise<string> {
+  const client = createServiceClient();
+  const { data, error } = await client
+    .from("farmer_user_identities")
+    .select("identity_key")
+    .eq("user_id", userId)
+    .eq("provider", "wechat_unionid")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return String(data?.identity_key ?? "").trim();
+}
+
+export async function scheduleAccountDeletion(input: {
+  userId: string;
+  confirmedBy: "phone" | "wechat";
+}): Promise<AccountDeletionStatus> {
+  const existingStatus = await getAccountDeletionStatus(input.userId);
+  if (existingStatus.status === "pending") {
+    await deleteSessionsByUserId(input.userId);
+    return existingStatus;
+  }
+
+  const now = Date.now();
+  const deletionRequestedAt = new Date(now).toISOString();
+  const deletionScheduledFor = new Date(
+    now + accountDeletionWindowDays() * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const client = createServiceClient();
+  const { error } = await client
+    .from("farmer_users")
+    .update({
+      deletion_requested_at: deletionRequestedAt,
+      deletion_scheduled_for: deletionScheduledFor,
+      deletion_confirmed_by: input.confirmedBy,
+      deletion_completed_at: null,
+    })
+    .eq("id", input.userId);
+
+  if (error) {
+    throw error;
+  }
+
+  await deleteSessionsByUserId(input.userId);
+  return {
+    status: "pending",
+    requestedAt: deletionRequestedAt,
+    scheduledFor: deletionScheduledFor,
+    confirmedBy: input.confirmedBy,
+    message:
+      `账号已申请注销，将在 ${accountDeletionWindowDays()} 天内彻底删除。`,
+  };
+}
+
 export async function replaceSession(input: {
   session: AuthenticatedSession;
   userId: string;
@@ -689,6 +900,11 @@ export async function rotateSession(
 
   if (error || !session) {
     throw new Error("Invalid refresh token.");
+  }
+
+  const deletionState = normalizeDeletionRow(session.farmer_users);
+  if (isDeletionPending(deletionState)) {
+    throw new Error(buildAccountDeletionStatus(deletionState).message);
   }
 
   const expiresAt = new Date(session.refresh_expires_at as string).getTime();
@@ -752,6 +968,11 @@ export async function requireSession(
 
   if (error || !session) {
     throw new Error("Invalid access token.");
+  }
+
+  const deletionState = normalizeDeletionRow(session.farmer_users);
+  if (isDeletionPending(deletionState)) {
+    throw new Error(buildAccountDeletionStatus(deletionState).message);
   }
 
   const expiresAt = new Date(session.access_expires_at as string).getTime();

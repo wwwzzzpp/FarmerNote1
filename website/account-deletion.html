@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>初芽巡田 FarmerNote 账号注销说明</title>
+    <meta
+      name="description"
+      content="初芽巡田 FarmerNote 账号注销说明，介绍注销入口、确认方式、15 天待删除机制与数据删除范围。"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script defer src="assets/site.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <img class="brand__mark" src="assets/icon-108.png" alt="初芽巡田图标" />
+          <span>
+            <span class="brand__eyebrow">Farmer Note</span>
+            <span class="brand__title">账号注销说明</span>
+          </span>
+        </a>
+        <nav class="nav" aria-label="法律导航">
+          <a href="index.html">官网首页</a>
+          <a href="privacy.html">隐私政策</a>
+          <a href="terms.html">用户协议</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-shell">
+      <section class="legal-hero">
+        <span class="pill">直接入口 + 明确删除范围 + 15 天冷静期</span>
+        <h1>账号注销说明</h1>
+        <p>
+          只要你在 FarmerNote 中使用了登录能力，就可以在 App 设置页直接发起账号注销。注销申请提交后，账号会立即退出登录并进入
+          <span data-deletion-days>15</span> 天待删除窗口，窗口结束后再彻底删除云端数据。
+        </p>
+      </section>
+
+      <section class="legal-card">
+        <h2>一、在哪里发起注销</h2>
+        <p>
+          在 Flutter 客户端中，你可以通过“记录页右上角设置入口 → 账号与数据 → 注销账号”进入注销流程。
+        </p>
+      </section>
+
+      <section class="legal-card">
+        <h2>二、注销确认方式</h2>
+        <ul>
+          <li>已绑定手机号的账号：通过短信验证码确认注销。</li>
+          <li>未绑定手机号但已绑定微信的账号：通过微信再次授权确认注销。</li>
+          <li>仅允许在当前有效登录态下发起，不支持匿名注销。</li>
+        </ul>
+      </section>
+
+      <section class="legal-card">
+        <h2>三、提交注销后会发生什么</h2>
+        <ol>
+          <li>当前登录会话立即失效，所有 session 会被清除。</li>
+          <li>App 本地会清空登录态，并回到未登录状态。</li>
+          <li>账号进入 <span data-deletion-days>15</span> 天待删除窗口。</li>
+          <li>待删除期间，账号不能再正常登录。</li>
+          <li>窗口结束后，系统执行彻底删除任务。</li>
+        </ol>
+      </section>
+
+      <section class="legal-card">
+        <h2>四、彻底删除范围</h2>
+        <ul>
+          <li>账号主体信息 `farmer_users`</li>
+          <li>身份绑定信息 `farmer_user_identities`</li>
+          <li>登录会话 `farmer_user_sessions`</li>
+          <li>巡田记录 `entries`</li>
+          <li>待办数据 `tasks`</li>
+          <li>云端图片对象 `entry-photos`</li>
+        </ul>
+      </section>
+
+      <section class="legal-card">
+        <h2>五、待删除期间的说明</h2>
+        <div class="note">
+          FarmerNote 当前采用冷静期机制：你提交注销后，系统先阻止该账号继续正常登录，再于
+          <span data-deletion-days>15</span>
+          天后执行最终清理。这样可以降低误操作风险，并满足国内应用市场对“可注销、可说明删除时限”的要求。
+        </div>
+      </section>
+
+      <section class="legal-card">
+        <h2>六、联系我们</h2>
+        <p>
+          如果你对注销流程、删除范围或待删除状态有疑问，请通过
+          <strong data-support-text>待补充公开联系方式</strong>
+          与我们联系。
+        </p>
+      </section>
+    </main>
+
+    <div class="mini-footer">
+      © <span data-site-year></span> FarmerNote ·
+      <a class="muted-link" href="privacy.html">隐私政策</a>
+    </div>
+  </body>
+</html>

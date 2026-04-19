@@ -143,6 +143,9 @@ supabase functions deploy auth-phone-login --no-verify-jwt
 supabase functions deploy auth-link-phone --no-verify-jwt
 supabase functions deploy auth-link-wechat --no-verify-jwt
 supabase functions deploy auth-refresh --no-verify-jwt
+supabase functions deploy account-request-deletion --no-verify-jwt
+supabase functions deploy account-deletion-status --no-verify-jwt
+supabase functions deploy account-purge-due --no-verify-jwt
 supabase functions deploy sync-push --no-verify-jwt
 supabase functions deploy sync-pull --no-verify-jwt
 supabase functions deploy media-upload-ticket --no-verify-jwt
@@ -275,5 +278,21 @@ https://your-project-ref.supabase.co
 - `WECHAT_OPEN_APP_ID`
 - `FARMERNOTE_SUPABASE_FUNCTIONS_BASE_URL`
 - iOS `Universal Link`
+
+## 8. 账号注销补充配置
+
+这次合规改造新增了账号注销与定时清理能力，服务端环境里还需要补两项：
+
+```text
+FARMERNOTE_ACCOUNT_DELETION_WINDOW_DAYS=15
+FARMERNOTE_ACCOUNT_PURGE_TOKEN=一段仅供 GitHub Actions 调用清理函数的随机密钥
+```
+
+仓库内已经加入了 `.github/workflows/purge-deleted-accounts.yml`，你后续只要在 GitHub 仓库 Secrets 里补下面 4 个值，就能每天自动清理 test / prod 环境中已经到期的待删除账号：
+
+- `FARMERNOTE_TEST_FUNCTIONS_BASE_URL`
+- `FARMERNOTE_TEST_PURGE_TOKEN`
+- `FARMERNOTE_PROD_FUNCTIONS_BASE_URL`
+- `FARMERNOTE_PROD_PURGE_TOKEN`
 
 这些有了之后，就可以开始真机联调。

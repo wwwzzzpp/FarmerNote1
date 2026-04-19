@@ -6,7 +6,8 @@ import { getEnv, getNumberEnv, getOptionalEnv } from "./env.ts";
 import { createServiceClient } from "./supabase.ts";
 
 const verificationTable = "farmer_phone_verification_codes";
-const verificationPurpose = "auth";
+
+export type VerificationPurpose = "auth" | "account_deletion";
 
 type VerificationStatus =
   | "pending"
@@ -177,6 +178,7 @@ function normalizeVerificationRow(value: unknown): VerificationRow {
 
 async function loadLatestVerification(
   phone: string,
+  purpose: VerificationPurpose,
 ): Promise<VerificationRow | null> {
   const client = createServiceClient();
   const { data, error } = await client
@@ -185,7 +187,7 @@ async function loadLatestVerification(
       "id, phone, purpose, code_hash, status, attempt_count, max_attempts, expires_at, sent_at",
     )
     .eq("phone", phone)
-    .eq("purpose", verificationPurpose)
+    .eq("purpose", purpose)
     .neq("status", "send_failed")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -210,6 +212,7 @@ function secondsUntil(value: string): number {
 async function createPendingVerification(input: {
   phone: string;
   codeHash: string;
+  purpose: VerificationPurpose;
 }): Promise<VerificationRow> {
   const client = createServiceClient();
   const now = Date.now();
@@ -217,7 +220,7 @@ async function createPendingVerification(input: {
     .from(verificationTable)
     .insert({
       phone: input.phone,
-      purpose: verificationPurpose,
+      purpose: input.purpose,
       provider: "aliyun_sms",
       code_hash: input.codeHash,
       status: "pending",
@@ -291,9 +294,18 @@ async function sendAliyunSms(input: {
   };
 }
 
-export async function sendPhoneOtp(phone: string): Promise<void> {
+export async function sendPhoneOtp(
+  phone: string,
+  options: {
+    purpose?: VerificationPurpose;
+  } = {},
+): Promise<void> {
   const normalizedPhone = normalizePhoneNumber(phone);
-  const latestVerification = await loadLatestVerification(normalizedPhone);
+  const purpose = options.purpose ?? "auth";
+  const latestVerification = await loadLatestVerification(
+    normalizedPhone,
+    purpose,
+  );
   const retryAfterSeconds = latestVerification
     ? Math.max(
       otpResendCooldownSeconds() -
@@ -312,6 +324,7 @@ export async function sendPhoneOtp(phone: string): Promise<void> {
   const verification = await createPendingVerification({
     phone: normalizedPhone,
     codeHash: await hashPhoneCode(normalizedPhone, code),
+    purpose,
   });
 
   try {
@@ -353,9 +366,11 @@ export async function sendPhoneOtp(phone: string): Promise<void> {
 export async function verifyPhoneOtp(input: {
   phone: string;
   token: string;
+  purpose?: VerificationPurpose;
 }): Promise<string> {
   const phone = normalizePhoneNumber(input.phone);
   const token = String(input.token ?? "").trim().replace(/\s+/g, "");
+  const purpose = input.purpose ?? "auth";
   if (!token) {
     throw new Error("请输入验证码。");
   }
@@ -364,7 +379,7 @@ export async function verifyPhoneOtp(input: {
   }
 
   const client = createServiceClient();
-  const verification = await loadLatestVerification(phone);
+  const verification = await loadLatestVerification(phone, purpose);
   if (!verification) {
     throw new Error("请先获取验证码。");
   }

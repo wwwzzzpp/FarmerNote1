@@ -38,6 +38,10 @@ Flutter/apps/farmernote_app
 - 工程校验
   - `flutter analyze` 已通过
   - `flutter test` 已通过
+- 合规能力
+  - 首次冷启动会先展示《隐私政策》与《用户协议》提示
+  - 用户同意前不初始化第三方插件、不恢复业务本地状态
+  - 设置页已提供《隐私政策》《用户协议》与账号注销入口
 
 ## 云端同步现状
 
@@ -58,6 +62,7 @@ Flutter/apps/farmernote_app
 - 只有“登录后新产生的数据”会进入云同步
 - 历史旧本地数据不会自动迁移到云端
 - 系统日历仍然只属于当前设备，不参与跨端同步
+- 首次冷启动未同意协议前，不会初始化 Flutter 第三方插件
 
 ## 目录结构
 
@@ -115,7 +120,7 @@ flutter devices
 
 - 创建 Supabase 项目
 - 执行 `supabase/migrations/202604130001_cloud_sync.sql`
-- 部署 7 个 Edge Functions
+- 部署当前云同步、双通道登录与账号注销所需的 Edge Functions
 - 配置 `entry-photos` 私有 bucket
 - 写入微信和 Supabase 的服务端环境变量
 

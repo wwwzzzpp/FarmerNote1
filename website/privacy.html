@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>初芽巡田 FarmerNote 隐私政策</title>
+    <meta
+      name="description"
+      content="初芽巡田 FarmerNote 隐私政策，覆盖 Android App、小程序与云同步服务。"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script defer src="assets/site.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <img class="brand__mark" src="assets/icon-108.png" alt="初芽巡田图标" />
+          <span>
+            <span class="brand__eyebrow">Farmer Note</span>
+            <span class="brand__title">隐私政策</span>
+          </span>
+        </a>
+        <nav class="nav" aria-label="法律导航">
+          <a href="index.html">官网首页</a>
+          <a href="terms.html">用户协议</a>
+          <a href="account-deletion.html">账号注销</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-shell">
+      <section class="legal-hero">
+        <span class="pill">覆盖 Android App + 小程序 + 云同步服务</span>
+        <h1>初芽巡田 FarmerNote 隐私政策</h1>
+        <p>
+          生效日期：2026 年 4 月 19 日。为了满足国内安卓应用市场和微信生态的合规要求，本政策统一说明
+          FarmerNote 在 Android App、小程序与云同步服务中的数据处理方式、权限使用、第三方组件接入情况以及账号注销机制。
+        </p>
+      </section>
+
+      <section class="legal-card">
+        <h2>一、我们处理哪些信息</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>数据项</th>
+              <th>处理目的</th>
+              <th>是否必需</th>
+              <th>主要存储位置</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>微信身份标识（UnionID / OpenID）</td>
+              <td>完成微信登录、身份绑定与跨端账号识别</td>
+              <td>仅在你选择微信登录时必需</td>
+              <td>Supabase 数据库</td>
+            </tr>
+            <tr>
+              <td>手机号与短信验证码</td>
+              <td>完成手机号验证码登录、绑定手机号与账号注销确认</td>
+              <td>仅在你选择手机号登录或手机号注销确认时必需</td>
+              <td>Supabase 数据库、验证码表</td>
+            </tr>
+            <tr>
+              <td>记录文本、提醒时间、待办状态</td>
+              <td>保存你的巡田记录、生成待办、同步到同账号设备</td>
+              <td>你主动输入或保存时产生</td>
+              <td>本机存储、Supabase 数据库</td>
+            </tr>
+            <tr>
+              <td>现场照片</td>
+              <td>配合记录保存现场情况，并在登录后进行云同步</td>
+              <td>仅在你主动拍照时产生</td>
+              <td>本机文件目录、Supabase Storage</td>
+            </tr>
+            <tr>
+              <td>设备内生成的随机 deviceId</td>
+              <td>区分不同登录设备，维护自定义 session</td>
+              <td>仅在云端登录时必需</td>
+              <td>本机存储、Supabase 数据库</td>
+            </tr>
+            <tr>
+              <td>日志、速率限制记录</td>
+              <td>防刷、防滥用、排查发送验证码与同步请求异常</td>
+              <td>服务运行所需</td>
+              <td>Supabase 数据库与函数日志</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="legal-card">
+        <h2>二、我们不会在未同意前做什么</h2>
+        <div class="note danger-note">
+          FarmerNote 首次冷启动时，会先展示《隐私政策》和《用户协议》提示。在你点击“同意并继续”前，Flutter
+          客户端不会初始化第三方插件，不会恢复业务本地状态，不会触发微信 SDK，不会请求摄像头或系统日历权限，也不会主动读取
+          MAC、IMEI 等设备标识串。
+        </div>
+      </section>
+
+      <section class="legal-card">
+        <h2>三、权限使用说明</h2>
+        <h3>1. 摄像头权限</h3>
+        <p>
+          仅在你主动点击“拍照记录”时申请，用于拍摄并保存现场照片。不使用该功能时，不会申请该权限。
+        </p>
+
+        <h3>2. 相册/照片访问权限</h3>
+        <p>
+          仅在系统相机或图片流程需要保存、读取图片时使用，用于显示你刚拍下的记录照片。
+        </p>
+
+        <h3>3. 日历权限</h3>
+        <p>
+          仅在你主动保存带提醒时间的记录，并选择将提醒写入系统日历时申请，用于创建系统日历提醒。
+        </p>
+      </section>
+
+      <section class="legal-card">
+        <h2>四、第三方 SDK / 插件接入说明</h2>
+        <p>
+          我们接入的第三方组件分两类：一类是带独立运营主体的 SDK，例如微信开放平台；另一类是开源桥接插件，例如
+          Flutter 的相机、日历和本地存储插件。对于未单独提供隐私政策的开源插件，我们提供其官方说明页作为补充披露。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>组件</th>
+              <th>用途</th>
+              <th>可能触达的信息</th>
+              <th>参考链接</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>微信开放平台 SDK（通过 fluwx 接入）</td>
+              <td>微信登录、微信身份绑定</td>
+              <td>微信授权 code、UnionID / OpenID</td>
+              <td>
+                <a class="muted-link" href="https://pub.dev/packages/fluwx">fluwx 说明页</a><br />
+                <a class="muted-link" href="https://www.tencent.com/zh-cn/privacy-policy.html">腾讯隐私保护平台</a>
+              </td>
+            </tr>
+            <tr>
+              <td>image_picker</td>
+              <td>相机拍照与图片返回</td>
+              <td>你主动拍摄的图片内容</td>
+              <td>
+                <a class="muted-link" href="https://pub.dev/packages/image_picker">image_picker 说明页</a>
+              </td>
+            </tr>
+            <tr>
+              <td>device_calendar</td>
+              <td>把待办写入系统日历</td>
+              <td>提醒标题、提醒时间、日历权限状态</td>
+              <td>
+                <a class="muted-link" href="https://pub.dev/packages/device_calendar">device_calendar 说明页</a>
+              </td>
+            </tr>
+            <tr>
+              <td>shared_preferences</td>
+              <td>本地保存业务状态、session 与随机 deviceId</td>
+              <td>本地偏好配置、业务缓存、随机标识</td>
+              <td>
+                <a class="muted-link" href="https://pub.dev/packages/shared_preferences">shared_preferences 说明页</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="legal-card">
+        <h2>五、存储期限与删除规则</h2>
+        <ul>
+          <li>本机记录：由你自己控制，卸载 App 或清空数据后会被删除。</li>
+          <li>云端记录、待办与照片：在你保持账号有效期间存储于 Supabase。</li>
+          <li>短信验证码：仅用于短时校验，默认 5 分钟内有效，验证完成或过期后失效。</li>
+          <li>
+            账号注销：你提交注销申请后，账号先进入 <span data-deletion-days>15</span>
+            天待删除窗口；窗口到期后，我们会从云端删除账号、身份绑定、会话、记录、待办与媒体对象。
+          </li>
+        </ul>
+      </section>
+
+      <section class="legal-card">
+        <h2>六、你的权利</h2>
+        <ul>
+          <li>你可以查看本政策和《用户协议》，了解我们处理数据的方式。</li>
+          <li>你可以在 App 设置页发起账号注销申请。</li>
+          <li>你可以在未登录状态下只使用本机模式，不开启跨端同步。</li>
+          <li>你可以拒绝摄像头、日历等权限；拒绝后，仅对应功能受限，其他功能仍可继续使用。</li>
+        </ul>
+      </section>
+
+      <section class="legal-card">
+        <h2>七、联系我们</h2>
+        <p>
+          当前公开支持方式：<strong data-support-text>待补充公开联系方式</strong>。
+          <span data-support-hint></span>
+        </p>
+        <p>
+          官网公开地址：<a class="muted-link" data-website-url href="#"></a>
+        </p>
+      </section>
+    </main>
+
+    <div class="mini-footer">
+      © <span data-site-year></span> FarmerNote ·
+      <a class="muted-link" href="terms.html">用户协议</a>
+    </div>
+  </body>
+</html>

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config/cloud_config.dart';
+import '../models/account_deletion_status.dart';
 import '../models/auth_session.dart';
 
 class AuthServiceException implements Exception {
@@ -140,6 +141,63 @@ class AuthService {
       body: <String, dynamic>{'refreshToken': session.refreshToken},
       fallbackMessage: '刷新登录状态失败。',
     );
+  }
+
+  Future<AccountDeletionStatus> loadAccountDeletionStatus({
+    required AuthSession session,
+  }) async {
+    final payload = await _postJson(
+      endpoint: 'account-deletion-status',
+      body: const <String, dynamic>{},
+      bearerToken: session.accessToken,
+      fallbackMessage: '加载账号注销状态失败。',
+    );
+    return AccountDeletionStatus.fromJson(payload);
+  }
+
+  Future<void> sendAccountDeletionPhoneCode({
+    required AuthSession session,
+  }) async {
+    await _postJson(
+      endpoint: 'account-request-deletion',
+      body: const <String, dynamic>{'action': 'send_phone_code'},
+      bearerToken: session.accessToken,
+      fallbackMessage: '发送注销验证码失败。',
+    );
+  }
+
+  Future<AccountDeletionStatus> requestAccountDeletionWithPhone({
+    required AuthSession session,
+    required String code,
+  }) async {
+    final payload = await _postJson(
+      endpoint: 'account-request-deletion',
+      body: <String, dynamic>{
+        'action': 'confirm_phone_code',
+        'code': code.trim(),
+      },
+      bearerToken: session.accessToken,
+      fallbackMessage: '提交账号注销失败。',
+    );
+    return AccountDeletionStatus.fromJson(payload);
+  }
+
+  Future<AccountDeletionStatus> requestAccountDeletionWithWeChat({
+    required AuthSession session,
+  }) async {
+    _ensureWeChatConfigured();
+    final authCode = await _requestWeChatCode();
+    final payload = await _postJson(
+      endpoint: 'account-request-deletion',
+      body: <String, dynamic>{
+        'action': 'confirm_wechat',
+        'platform': 'flutter_app',
+        'wechatCode': authCode,
+      },
+      bearerToken: session.accessToken,
+      fallbackMessage: '提交账号注销失败。',
+    );
+    return AccountDeletionStatus.fromJson(payload);
   }
 
   void _ensureCloudConfigured() {

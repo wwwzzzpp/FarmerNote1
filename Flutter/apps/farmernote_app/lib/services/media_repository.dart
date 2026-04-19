@@ -51,6 +51,17 @@ class MediaRepository {
     }
   }
 
+  Future<void> clearAllLocalMedia() async {
+    final root = await getApplicationSupportDirectory();
+    final directories = <String>['draft-photos', 'media-cache'];
+    for (final segment in directories) {
+      final directory = Directory('${root.path}/$segment');
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    }
+  }
+
   Future<String> uploadPhoto({
     required AuthSession session,
     required String localPath,

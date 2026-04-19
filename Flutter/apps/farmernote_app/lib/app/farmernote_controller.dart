@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/cloud_config.dart';
 import '../models/auth_session.dart';
+import '../models/account_deletion_status.dart';
 import '../models/calendar_sync_result.dart';
 import '../models/entry_record.dart';
 import '../models/stored_app_state.dart';
@@ -57,6 +58,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   List<SyncMutation> _pendingMutations = <SyncMutation>[];
   Map<String, String> _mediaCacheIndex = <String, String>{};
   AuthSession? _authSession;
+  AccountDeletionStatus _accountDeletionStatus = AccountDeletionStatus.none();
   bool _isReady = false;
   bool _isSyncing = false;
   bool _isAuthenticating = false;
@@ -92,6 +94,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   String get focusTaskId => _focusTaskId;
   int get pendingCloudChangeCount => _pendingMutations.length;
   AuthSession? get authSession => _authSession;
+  AccountDeletionStatus get accountDeletionStatus => _accountDeletionStatus;
+  bool get isAccountDeletionPending => _accountDeletionStatus.isPending;
   bool get isTimelineInitialLoading =>
       _isInitialCloudBootstrapInFlight &&
       !_hasCompletedInitialCloudBootstrap &&
@@ -122,6 +126,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   String get cloudStatusHeadline {
+    if (!isSignedIn && _accountDeletionStatus.isPending) {
+      return '账号已提交注销';
+    }
     if (!isCloudConfigured) {
       return '当前还没接入云端环境';
     }
@@ -152,6 +159,11 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   String get cloudStatusDetail {
+    if (!isSignedIn && _accountDeletionStatus.isPending) {
+      return _accountDeletionStatus.message.isNotEmpty
+          ? _accountDeletionStatus.message
+          : '账号已申请注销，将在 15 天内彻底删除。';
+    }
     if (!isCloudConfigured) {
       return '先配置 Supabase Functions 地址，之后多端数据才能互通。';
     }
@@ -487,6 +499,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       final session = isDevLoginEnabled
           ? await _authService.signInWithDevLogin()
           : await _authService.signInWithWeChat();
+      _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
         _currentState.copyWith(authSession: session),
         shouldNotify: false,
@@ -541,6 +554,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         phone: phone,
         code: code,
       );
+      _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
         _currentState.copyWith(authSession: session),
         shouldNotify: false,
@@ -572,6 +586,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         phone: phone,
         code: code,
       );
+      _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
         _currentState.copyWith(authSession: session),
         shouldNotify: false,
@@ -599,12 +614,108 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       final session = await _authService.linkWeChat(session: _authSession!);
+      _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
         _currentState.copyWith(authSession: session),
         shouldNotify: false,
       );
       _lastSyncedAt = null;
       await syncNow();
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<AccountDeletionStatus> loadAccountDeletionStatus() async {
+    if (_authSession == null) {
+      _accountDeletionStatus = AccountDeletionStatus.none();
+      notifyListeners();
+      return _accountDeletionStatus;
+    }
+
+    try {
+      final status = await _authService.loadAccountDeletionStatus(
+        session: _authSession!,
+      );
+      _accountDeletionStatus = status;
+      notifyListeners();
+      return status;
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> sendAccountDeletionPhoneCode() async {
+    if (_isAuthenticating || _authSession == null) {
+      return;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      await _authService.sendAccountDeletionPhoneCode(session: _authSession!);
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<AccountDeletionStatus> requestAccountDeletionWithPhone({
+    required String code,
+  }) async {
+    if (_isAuthenticating || _authSession == null) {
+      return _accountDeletionStatus;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      final status = await _authService.requestAccountDeletionWithPhone(
+        session: _authSession!,
+        code: code,
+      );
+      await _resetAfterAccountDeletion(status);
+      return status;
+    } catch (error) {
+      _cloudError = _humanizeCloudError(error);
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<AccountDeletionStatus> requestAccountDeletionWithWeChat() async {
+    if (_isAuthenticating || _authSession == null) {
+      return _accountDeletionStatus;
+    }
+
+    _isAuthenticating = true;
+    _cloudError = '';
+    notifyListeners();
+
+    try {
+      final status = await _authService.requestAccountDeletionWithWeChat(
+        session: _authSession!,
+      );
+      await _resetAfterAccountDeletion(status);
+      return status;
     } catch (error) {
       _cloudError = _humanizeCloudError(error);
       notifyListeners();
@@ -691,6 +802,18 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       }
       // Silent sync failures should not interrupt local usage.
     }
+  }
+
+  Future<void> _resetAfterAccountDeletion(AccountDeletionStatus status) async {
+    _lastSyncedAt = null;
+    _accountDeletionStatus = status;
+    _cloudError = status.message;
+    try {
+      await _mediaRepository.clearAllLocalMedia();
+    } catch (_) {
+      // Local media cleanup failure should not block account deletion flow.
+    }
+    await _applyState(StoredAppState.empty(), shouldNotify: false);
   }
 
   Future<CalendarSyncResult> addTaskToPhoneCalendar({

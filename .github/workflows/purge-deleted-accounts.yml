@@ -1,0 +1,31 @@
+name: Purge Deleted Accounts
+
+on:
+  schedule:
+    - cron: '18 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    env:
+      TEST_BASE_URL: ${{ secrets.FARMERNOTE_TEST_FUNCTIONS_BASE_URL }}
+      TEST_PURGE_TOKEN: ${{ secrets.FARMERNOTE_TEST_PURGE_TOKEN }}
+      PROD_BASE_URL: ${{ secrets.FARMERNOTE_PROD_FUNCTIONS_BASE_URL }}
+      PROD_PURGE_TOKEN: ${{ secrets.FARMERNOTE_PROD_PURGE_TOKEN }}
+    steps:
+      - name: Purge test environment
+        if: ${{ env.TEST_BASE_URL != '' && env.TEST_PURGE_TOKEN != '' }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer ${TEST_PURGE_TOKEN}" \
+            "${TEST_BASE_URL%/}/account-purge-due"
+
+      - name: Purge production environment
+        if: ${{ env.PROD_BASE_URL != '' && env.PROD_PURGE_TOKEN != '' }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer ${PROD_PURGE_TOKEN}" \
+            "${PROD_BASE_URL%/}/account-purge-due"
