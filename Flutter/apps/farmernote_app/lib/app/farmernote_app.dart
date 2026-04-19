@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/record/record_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/tasks/tasks_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import '../theme/app_theme.dart';
@@ -74,6 +75,7 @@ class FarmerNoteScaffold extends StatelessWidget {
           RecordScreen(controller: controller),
           TimelineScreen(controller: controller),
           TasksScreen(controller: controller),
+          SettingsScreen(controller: controller),
         ],
       ),
       bottomNavigationBar: BottomPillNavigation(
@@ -88,6 +90,9 @@ class FarmerNoteScaffold extends StatelessWidget {
               break;
             case 2:
               controller.goToTasks();
+              break;
+            case 3:
+              controller.goToMe();
               break;
           }
         },

@@ -843,6 +843,11 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  void goToMe() {
+    _selectedTabIndex = 3;
+    notifyListeners();
+  }
+
   Map<String, int> get stats {
     final taskRecords = _buildTaskRecords();
     return <String, int>{

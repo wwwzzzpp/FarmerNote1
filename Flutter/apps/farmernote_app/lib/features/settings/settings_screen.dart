@@ -47,186 +47,188 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        backgroundColor: AppColors.surface,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              ScreenSectionCard(
-                margin: EdgeInsets.zero,
-                backgroundColor: AppColors.hero,
-                borderColor: AppColors.borderDark,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      '账号与合规',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1.4,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _accountTitle(),
-                      style: const TextStyle(
-                        fontSize: 26,
-                        height: 1.15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textHero,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _accountDetail(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              '我',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
               ),
-              ScreenSectionCard(
-                child: Column(
-                  children: <Widget>[
-                    _SettingsTile(
-                      title: '隐私政策',
-                      subtitle: '查看 App、小程序和云同步服务统一隐私说明',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const LegalDocumentScreen(
-                              type: LegalDocumentType.privacy,
-                            ),
-                          ),
-                        );
-                      },
+            ),
+            ScreenSectionCard(
+              margin: const EdgeInsets.only(top: 12),
+              backgroundColor: AppColors.hero,
+              borderColor: AppColors.borderDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    '账号与合规',
+                    style: TextStyle(
+                      fontSize: 12,
+                      letterSpacing: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
                     ),
-                    _SettingsTile(
-                      title: '用户协议',
-                      subtitle: '查看服务范围、账号规则与注销机制',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const LegalDocumentScreen(
-                              type: LegalDocumentType.terms,
-                            ),
-                          ),
-                        );
-                      },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _accountTitle(),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      height: 1.15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textHero,
                     ),
-                    _SettingsTile(
-                      title: '账号注销',
-                      subtitle: '登录后可直接发起注销申请，并查看 15 天删除窗口说明',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                AccountDeletionScreen(controller: controller),
-                          ),
-                        );
-                      },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _accountDetail(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.7,
+                      color: AppColors.textSecondary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              ScreenSectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      '官网与公开链接',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      LegalConfig.websiteBaseUrl,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FarmerButton(
-                      label: '复制官网地址',
-                      tone: FarmerButtonTone.secondary,
-                      small: true,
-                      onPressed: () async {
-                        await Clipboard.setData(
-                          const ClipboardData(text: LegalConfig.websiteBaseUrl),
-                        );
-                        if (context.mounted) {
-                          showAppSnackBar(context, '官网地址已复制');
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '公开支持方式',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      LegalConfig.supportContact,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.7,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      LegalConfig.supportHint,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ScreenSectionCard(
-                child: Row(
-                  children: const <Widget>[
-                    Expanded(
-                      child: Text(
-                        '当前版本',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+            ),
+            ScreenSectionCard(
+              child: Column(
+                children: <Widget>[
+                  _SettingsTile(
+                    title: '隐私政策',
+                    subtitle: '查看 App、小程序和云同步服务统一隐私说明',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LegalDocumentScreen(
+                            type: LegalDocumentType.privacy,
+                          ),
                         ),
-                      ),
-                    ),
-                    Text(
-                      'v${LegalConfig.appVersion}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    title: '用户协议',
+                    subtitle: '查看服务范围、账号规则与注销机制',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LegalDocumentScreen(
+                            type: LegalDocumentType.terms,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    title: '账号注销',
+                    subtitle: '登录后可直接发起注销申请，并查看 15 天删除窗口说明',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              AccountDeletionScreen(controller: controller),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            ScreenSectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    '官网与公开链接',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    LegalConfig.websiteBaseUrl,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.7,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FarmerButton(
+                    label: '复制官网地址',
+                    tone: FarmerButtonTone.secondary,
+                    small: true,
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        const ClipboardData(text: LegalConfig.websiteBaseUrl),
+                      );
+                      if (context.mounted) {
+                        showAppSnackBar(context, '官网地址已复制');
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '公开支持方式',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    LegalConfig.supportContact,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.7,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    LegalConfig.supportHint,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.7,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ScreenSectionCard(
+              child: Row(
+                children: const <Widget>[
+                  Expanded(
+                    child: Text(
+                      '当前版本',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'v${LegalConfig.appVersion}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -11,8 +11,6 @@ import '../../utils/date_utils.dart' as farmer_date;
 import '../../utils/reminder_intent_parser.dart';
 import '../../widgets/farmer_ui.dart';
 import '../../widgets/stored_photo.dart';
-import '../settings/settings_screen.dart';
-
 class RecordScreen extends StatefulWidget {
   const RecordScreen({required this.controller, super.key});
 
@@ -571,44 +569,8 @@ class _RecordScreenState extends State<RecordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const Text(
-                    '记录',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const Spacer(),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              SettingsScreen(controller: widget.controller),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF7F2E7),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFD4C9AF)),
-                      ),
-                      child: const Icon(
-                        Icons.settings_rounded,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
               ScreenSectionCard(
-                margin: const EdgeInsets.only(top: 12),
+                margin: EdgeInsets.zero,
                 backgroundColor: AppColors.hero,
                 borderColor: AppColors.borderDark,
                 child: Column(

@@ -1,5 +1,5 @@
 const SUPABASE_FUNCTIONS_BASE_URL =
-  'https://gjxiklbnikvkzxtfayui.supabase.co/functions/v1';
+  'https://rfnjqodcpxxmxinijqcb.supabase.co/functions/v1';
 const ENABLE_DEV_LOGIN = false;
 const ENABLE_WECHAT_LOGIN = false;
 const DEV_LOGIN_KEY = 'farmernote-local-shared-user';
