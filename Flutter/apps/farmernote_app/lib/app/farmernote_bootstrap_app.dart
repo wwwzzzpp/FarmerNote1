@@ -206,6 +206,11 @@ class _FarmerNoteBootstrapAppState extends State<FarmerNoteBootstrapApp> {
       );
     }
 
-    return FarmerNoteScaffold(controller: _controller!);
+    return AnimatedBuilder(
+      animation: _controller!,
+      builder: (context, _) {
+        return FarmerNoteScaffold(controller: _controller!);
+      },
+    );
   }
 }

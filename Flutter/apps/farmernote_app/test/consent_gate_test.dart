@@ -55,6 +55,33 @@ void main() {
     expect(find.text('今天田里看到啥，先记下来。'), findsOneWidget);
     expect(initializeCallCount, 1);
   });
+
+  testWidgets('bootstrap app rebuilds when bottom navigation changes tabs', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final consentService = _FakeStartupConsentService(initialAccepted: true);
+
+    await tester.pumpWidget(
+      FarmerNoteBootstrapApp(
+        startupConsentService: consentService,
+        controllerInitializer: () async {
+          final controller = FarmerNoteController();
+          await controller.initialize();
+          return controller;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('时间线').last);
+    await tester.pumpAndSettle();
+    expect(find.text('巡田时间线'), findsOneWidget);
+
+    await tester.tap(find.text('我').last);
+    await tester.pumpAndSettle();
+    expect(find.text('账号与合规'), findsOneWidget);
+  });
 }
 
 class _FakeStartupConsentService extends StartupConsentService {
