@@ -214,62 +214,69 @@ class BottomPillNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = <String>['记录', '时间线', '待办', '我'];
     final isCompact = MediaQuery.sizeOf(context).width < 380;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Container(
-        padding: EdgeInsets.all(isCompact ? 6 : 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFD4CCB5),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFC2B89B)),
-        ),
-        child: Row(
-          children: List<Widget>.generate(items.length, (index) {
-            final isActive = currentIndex == index;
-            return Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                height: isCompact ? 40 : 44,
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFFFAF6ED)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    onTap(index);
-                  },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    foregroundColor: isActive
-                        ? const Color(0xFF383425)
-                        : const Color(0xFF625D4B),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Center(
-                    child: Text(
-                      items[index],
-                      style: TextStyle(
-                        color: isActive
-                            ? const Color(0xFF383425)
-                            : const Color(0xFF625D4B),
-                        fontSize: isCompact ? 14 : 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            navigationBarTheme: NavigationBarThemeData(
+              height: isCompact ? 68 : 72,
+              backgroundColor: const Color(0xFFD4CCB5),
+              indicatorColor: const Color(0xFFFAF6ED),
+              labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
+                final isSelected = states.contains(WidgetState.selected);
+                return TextStyle(
+                  fontSize: isCompact ? 11 : 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? const Color(0xFF383425)
+                      : const Color(0xFF625D4B),
+                );
+              }),
+              iconTheme: WidgetStateProperty.resolveWith<IconThemeData?>((states) {
+                final isSelected = states.contains(WidgetState.selected);
+                return IconThemeData(
+                  size: isCompact ? 20 : 22,
+                  color: isSelected
+                      ? const Color(0xFF383425)
+                      : const Color(0xFF625D4B),
+                );
+              }),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: currentIndex,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            onDestinationSelected: (index) {
+              FocusManager.instance.primaryFocus?.unfocus();
+              onTap(index);
+            },
+            destinations: const <NavigationDestination>[
+              NavigationDestination(
+                icon: Icon(Icons.edit_note_outlined),
+                selectedIcon: Icon(Icons.edit_note_rounded),
+                label: '记录',
               ),
-            );
-          }),
+              NavigationDestination(
+                icon: Icon(Icons.timeline_outlined),
+                selectedIcon: Icon(Icons.timeline_rounded),
+                label: '时间线',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.checklist_rtl_outlined),
+                selectedIcon: Icon(Icons.checklist_rtl_rounded),
+                label: '待办',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: '我',
+              ),
+            ],
+          ),
         ),
       ),
     );
