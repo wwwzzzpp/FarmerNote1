@@ -551,6 +551,7 @@ class _RecordScreenState extends State<RecordScreen> {
   Widget build(BuildContext context) {
     final stats = widget.controller.stats;
     final isCompact = MediaQuery.sizeOf(context).width < 380;
+    final showCloudCard = !widget.controller.isSignedIn;
     final showCloudActionButtons =
         widget.controller.shouldShowPrimaryCloudButton ||
         widget.controller.canLinkWeChat;
@@ -617,200 +618,201 @@ class _RecordScreenState extends State<RecordScreen> {
                   ],
                 ),
               ),
-              ScreenSectionCard(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 16 : 18,
-                  vertical: isCompact ? 14 : 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      widget.controller.cloudStatusHeadline,
-                      style: TextStyle(
-                        fontSize: isCompact ? 17 : 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      widget.controller.cloudStatusDetail,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.55,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    if (showCloudExtraContent) const SizedBox(height: 14),
-                    if (showCloudActionButtons)
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: <Widget>[
-                          if (widget.controller.shouldShowPrimaryCloudButton)
-                            SizedBox(
-                              width: isCompact ? 150 : 168,
-                              child: FarmerButton(
-                                label:
-                                    widget.controller.cloudPrimaryActionLabel,
-                                loading:
-                                    widget.controller.isSyncing ||
-                                    widget.controller.isAuthenticating,
-                                onPressed:
-                                    widget
-                                        .controller
-                                        .canTriggerPrimaryCloudAction
-                                    ? _handleCloudPrimaryAction
-                                    : null,
-                              ),
-                            ),
-                          if (widget.controller.canLinkWeChat)
-                            SizedBox(
-                              width: isCompact ? 126 : 138,
-                              child: FarmerButton(
-                                label: '绑定微信',
-                                tone: FarmerButtonTone.ghost,
-                                small: true,
-                                loading: widget.controller.isAuthenticating,
-                                onPressed: _handleLinkWeChat,
-                              ),
-                            ),
-                        ],
-                      ),
-                    if (showCloudSupportPanel) ...<Widget>[
-                      if (showCloudActionButtons) const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3EFE4),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFD8CFBA)),
+              if (showCloudCard)
+                ScreenSectionCard(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isCompact ? 16 : 18,
+                    vertical: isCompact ? 14 : 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        widget.controller.cloudStatusHeadline,
+                        style: TextStyle(
+                          fontSize: isCompact ? 17 : 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        widget.controller.cloudStatusDetail,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.55,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      if (showCloudExtraContent) const SizedBox(height: 14),
+                      if (showCloudActionButtons)
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
                           children: <Widget>[
-                            TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
-                                hintText: '输入中国大陆手机号，例如 13800138000',
-                                filled: true,
-                                fillColor: Color(0xFFFAF6ED),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(16),
-                                  ),
-                                  borderSide: BorderSide(
-                                    color: Color(0xFFD6CCB5),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(16),
-                                  ),
-                                  borderSide: BorderSide(
-                                    color: Color(0xFFD6CCB5),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(16),
-                                  ),
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
+                            if (widget.controller.shouldShowPrimaryCloudButton)
+                              SizedBox(
+                                width: isCompact ? 150 : 168,
+                                child: FarmerButton(
+                                  label:
+                                      widget.controller.cloudPrimaryActionLabel,
+                                  loading:
+                                      widget.controller.isSyncing ||
+                                      widget.controller.isAuthenticating,
+                                  onPressed:
+                                      widget
+                                          .controller
+                                          .canTriggerPrimaryCloudAction
+                                      ? _handleCloudPrimaryAction
+                                      : null,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: TextField(
-                                    controller: _phoneCodeController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      hintText: '输入验证码',
-                                      filled: true,
-                                      fillColor: Color(0xFFFAF6ED),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(16),
+                            if (widget.controller.canLinkWeChat)
+                              SizedBox(
+                                width: isCompact ? 126 : 138,
+                                child: FarmerButton(
+                                  label: '绑定微信',
+                                  tone: FarmerButtonTone.ghost,
+                                  small: true,
+                                  loading: widget.controller.isAuthenticating,
+                                  onPressed: _handleLinkWeChat,
+                                ),
+                              ),
+                          ],
+                        ),
+                      if (showCloudSupportPanel) ...<Widget>[
+                        if (showCloudActionButtons) const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3EFE4),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFFD8CFBA)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              TextField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  hintText: '输入中国大陆手机号，例如 13800138000',
+                                  filled: true,
+                                  fillColor: Color(0xFFFAF6ED),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: Color(0xFFD6CCB5),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: Color(0xFFD6CCB5),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                    borderSide: BorderSide(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _phoneCodeController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        hintText: '输入验证码',
+                                        filled: true,
+                                        fillColor: Color(0xFFFAF6ED),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(16),
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Color(0xFFD6CCB5),
+                                          ),
                                         ),
-                                        borderSide: BorderSide(
-                                          color: Color(0xFFD6CCB5),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(16),
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Color(0xFFD6CCB5),
+                                          ),
                                         ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(16),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(16),
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: AppColors.primary,
+                                          ),
                                         ),
-                                        borderSide: BorderSide(
-                                          color: Color(0xFFD6CCB5),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 14,
                                         ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(16),
-                                        ),
-                                        borderSide: BorderSide(
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 14,
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                SizedBox(
-                                  width: isCompact ? 112 : 126,
-                                  child: FarmerButton(
-                                    label: _phoneCodeCountdown > 0
-                                        ? '$_phoneCodeCountdown 秒'
-                                        : '发送验证码',
-                                    tone: FarmerButtonTone.ghost,
-                                    small: true,
-                                    loading:
-                                        widget.controller.isAuthenticating &&
-                                        _phoneCodeCountdown == 0,
-                                    onPressed:
-                                        (widget.controller.isAuthenticating ||
-                                            _phoneCodeCountdown > 0)
-                                        ? null
-                                        : _handleSendPhoneCode,
+                                  const SizedBox(width: 10),
+                                  SizedBox(
+                                    width: isCompact ? 112 : 126,
+                                    child: FarmerButton(
+                                      label: _phoneCodeCountdown > 0
+                                          ? '$_phoneCodeCountdown 秒'
+                                          : '发送验证码',
+                                      tone: FarmerButtonTone.ghost,
+                                      small: true,
+                                      loading:
+                                          widget.controller.isAuthenticating &&
+                                          _phoneCodeCountdown == 0,
+                                      onPressed:
+                                          (widget.controller.isAuthenticating ||
+                                              _phoneCodeCountdown > 0)
+                                          ? null
+                                          : _handleSendPhoneCode,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FarmerButton(
-                                label: widget.controller.canLinkPhone
-                                    ? '绑定手机号'
-                                    : '手机号验证码登录',
-                                tone: FarmerButtonTone.secondary,
-                                loading: widget.controller.isAuthenticating,
-                                onPressed: widget.controller.isAuthenticating
-                                    ? null
-                                    : _handlePhoneSubmit,
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FarmerButton(
+                                  label: widget.controller.canLinkPhone
+                                      ? '绑定手机号'
+                                      : '手机号验证码登录',
+                                  tone: FarmerButtonTone.secondary,
+                                  loading: widget.controller.isAuthenticating,
+                                  onPressed: widget.controller.isAuthenticating
+                                      ? null
+                                      : _handlePhoneSubmit,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
               ScreenSectionCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

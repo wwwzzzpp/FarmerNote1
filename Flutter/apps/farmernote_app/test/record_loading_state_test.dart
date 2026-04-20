@@ -15,7 +15,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'record screen keeps hydrated signed-in state when returning from other tabs',
+    'record screen hides cloud sign-in module after sign-in and keeps state across tabs',
     (tester) async {
       final initialState = _buildStoredState(
         entries: <EntryRecord>[
@@ -37,7 +37,8 @@ void main() {
       await tester.pumpWidget(FarmerNoteApp(controller: controller));
       await tester.pump();
 
-      expect(find.text('检查云端更新'), findsOneWidget);
+      expect(find.text('检查云端更新'), findsNothing);
+      expect(find.text('已登录 Tester'), findsNothing);
       expect(find.text('当前处于本机模式'), findsNothing);
       expect(find.text('微信登录'), findsNothing);
 
@@ -46,7 +47,8 @@ void main() {
       controller.goToRecord();
       await tester.pump();
 
-      expect(find.text('检查云端更新'), findsOneWidget);
+      expect(find.text('检查云端更新'), findsNothing);
+      expect(find.text('已登录 Tester'), findsNothing);
       expect(find.text('当前处于本机模式'), findsNothing);
       expect(find.text('微信登录'), findsNothing);
 

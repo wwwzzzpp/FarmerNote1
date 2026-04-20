@@ -742,7 +742,8 @@ function getCloudStatus() {
     primaryActionLabel,
     canUseWeChatLogin: canUseWeChatLogin(),
     shouldShowPrimaryAction:
-      isSignedIn || cloudConfig.isDevLoginEnabled() || canUseWeChatLogin(),
+      !isSignedIn &&
+      (cloudConfig.isDevLoginEnabled() || canUseWeChatLogin()),
     secondaryActionLabel:
       !isSignedIn && !cloudConfig.isDevLoginEnabled() ? '手机号验证码登录' : '',
     headline,

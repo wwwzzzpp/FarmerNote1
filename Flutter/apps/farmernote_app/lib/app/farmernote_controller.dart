@@ -87,7 +87,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   bool get shouldShowPhoneAuthPanel =>
       isCloudConfigured && !isDevLoginEnabled && (!isSignedIn || canLinkPhone);
   bool get shouldShowPrimaryCloudButton =>
-      isSignedIn || isDevLoginEnabled || canUseWeChatLogin;
+      !isSignedIn && (isDevLoginEnabled || canUseWeChatLogin);
   bool get canTriggerPrimaryCloudAction =>
       isCloudConfigured &&
       (isSignedIn || isDevLoginEnabled || canUseWeChatLogin);
