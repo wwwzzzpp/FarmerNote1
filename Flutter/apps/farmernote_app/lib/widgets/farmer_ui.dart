@@ -230,21 +230,31 @@ class BottomPillNavigation extends StatelessWidget {
           children: List<Widget>.generate(items.length, (index) {
             final isActive = currentIndex == index;
             return Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                height: isCompact ? 40 : 44,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFFFAF6ED)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
-                  onTap: () => onTap(index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    height: isCompact ? 40 : 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? const Color(0xFFFAF6ED)
-                          : Colors.transparent,
+                ),
+                child: TextButton(
+                  onPressed: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    onTap(index);
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(999),
                     ),
+                    foregroundColor: isActive
+                        ? const Color(0xFF383425)
+                        : const Color(0xFF625D4B),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Center(
                     child: Text(
                       items[index],
                       style: TextStyle(
