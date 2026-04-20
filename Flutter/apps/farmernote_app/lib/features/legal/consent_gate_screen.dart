@@ -7,16 +7,16 @@ import 'legal_document_screen.dart';
 import 'legal_documents.dart';
 
 class ConsentGateScreen extends StatelessWidget {
+  final bool isSubmitting;
+
+  final Future<void> Function() onAccept;
+  final VoidCallback onDecline;
   const ConsentGateScreen({
     required this.isSubmitting,
     required this.onAccept,
     required this.onDecline,
     super.key,
   });
-
-  final bool isSubmitting;
-  final Future<void> Function() onAccept;
-  final VoidCallback onDecline;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +58,7 @@ class ConsentGateScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 12),
                         Text(
-                          '为了满足上架合规要求，在你明确同意前，App 不会初始化第三方插件，不会恢复本地业务状态，也不会请求摄像头、日历等权限。',
+                          '在你明确同意前，App 不会初始化第三方插件，不会恢复本地业务状态，也不会请求摄像头、日历等权限。',
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.7,
@@ -113,24 +113,6 @@ class ConsentGateScreen extends StatelessWidget {
                               },
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3EFE4),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFD8CFBA)),
-                          ),
-                          child: const Text(
-                            '公开官网与法律页面已经准备好，后续上架填写时可直接使用公开链接。当前支持方式仍是占位文本，正式上架前请记得替换。',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.7,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
                         ),
                         const SizedBox(height: 16),
                         const Text(

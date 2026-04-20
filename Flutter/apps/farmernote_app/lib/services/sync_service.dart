@@ -18,12 +18,14 @@ class SyncResult {
     required this.session,
     required this.appliedMutationCount,
     required this.downloadedPhotoCount,
+    required this.processedMutationIds,
   });
 
   final StoredAppState state;
   final AuthSession session;
   final int appliedMutationCount;
   final int downloadedPhotoCount;
+  final List<String> processedMutationIds;
 }
 
 class SyncServiceException implements Exception {
@@ -74,6 +76,7 @@ class SyncService {
     workingState = await _uploadPendingPhotos(workingState, session);
 
     var appliedMutationCount = 0;
+    var processedMutationIds = <String>[];
     if (workingState.pendingMutations.isNotEmpty) {
       final pushPayload = await _buildPushMutations(workingState);
       final pushResponse = await _authorizedPost(
@@ -84,11 +87,12 @@ class SyncService {
 
       final appliedIds = _readStringList(pushResponse['appliedMutationIds']);
       final ignoredIds = _readStringList(pushResponse['ignoredMutationIds']);
+      processedMutationIds = <String>[...appliedIds, ...ignoredIds];
       appliedMutationCount = appliedIds.length;
       workingState = workingState.copyWith(
         pendingMutations: _queueStore.removeByIds(
           workingState.pendingMutations,
-          <String>{...appliedIds, ...ignoredIds},
+          <String>{...processedMutationIds},
         ),
       );
     }
@@ -120,6 +124,7 @@ class SyncService {
       session: session,
       appliedMutationCount: appliedMutationCount,
       downloadedPhotoCount: downloadedPhotoCount,
+      processedMutationIds: processedMutationIds,
     );
   }
 

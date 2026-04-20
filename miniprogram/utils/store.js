@@ -885,24 +885,31 @@ async function syncNow() {
   }
 
   syncInFlight = (async () => {
-    const state = loadState();
-    if (!cloudConfig.isConfigured() || !state.authSession) {
-      return state;
+    const stateSnapshot = loadState();
+    if (!cloudConfig.isConfigured() || !stateSnapshot.authSession) {
+      return stateSnapshot;
     }
 
     try {
-      const result = await cloudSync.syncState(state);
-      persistState(result.state);
+      const result = await cloudSync.syncState(stateSnapshot);
+      const latestState = loadState();
+      const rebasedState = cloudSync.rebaseSyncedState(
+        latestState,
+        result.state,
+        result.processedMutationIds || []
+      );
+      persistState(rebasedState);
       lastSyncError = '';
       const now = new Date();
       lastSyncAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(
         now.getHours()
       )}:${pad(now.getMinutes())}`;
-      return result.state;
+      return rebasedState;
     } catch (error) {
       if (cloudAuth.isSessionInvalidError(error)) {
+        const latestState = loadState();
         const nextState = {
-          ...state,
+          ...latestState,
           authSession: null,
         };
         persistState(nextState);

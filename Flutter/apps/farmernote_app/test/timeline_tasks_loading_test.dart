@@ -160,6 +160,7 @@ SyncResult _syncResult(StoredAppState state) => SyncResult(
   session: state.authSession!,
   appliedMutationCount: 0,
   downloadedPhotoCount: 0,
+  processedMutationIds: const <String>[],
 );
 
 AuthSession _buildAuthSession() {

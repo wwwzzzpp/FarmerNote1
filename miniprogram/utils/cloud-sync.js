@@ -24,6 +24,23 @@ function removeMutationIds(queue, mutationIds) {
   return queue.filter((mutation) => !idSet.has(mutation.id));
 }
 
+function toTimestamp(value) {
+  const timestamp = Date.parse(String(value || ''));
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getEntityQueueKey(entityType, entityId) {
+  return `${entityType}:${entityId}`;
+}
+
+function buildPendingEntityIndex(queue) {
+  const index = Object.create(null);
+  queue.forEach((mutation) => {
+    index[getEntityQueueKey(mutation.entityType, mutation.entityId)] = true;
+  });
+  return index;
+}
+
 function buildEntriesById(entries) {
   const map = Object.create(null);
   entries.forEach((entry) => {
@@ -38,6 +55,127 @@ function buildTasksById(tasks) {
     map[task.id] = task;
   });
   return map;
+}
+
+function preferSyncedRecord(latestRecord, syncedRecord) {
+  const latestSyncVersion = Number((latestRecord && latestRecord.syncVersion) || 0);
+  const syncedSyncVersion = Number((syncedRecord && syncedRecord.syncVersion) || 0);
+  if (syncedSyncVersion !== latestSyncVersion) {
+    return syncedSyncVersion > latestSyncVersion;
+  }
+
+  const latestTimestamp = Math.max(
+    toTimestamp(latestRecord && latestRecord.clientUpdatedAt),
+    toTimestamp(latestRecord && latestRecord.updatedAt),
+    toTimestamp(latestRecord && latestRecord.createdAt)
+  );
+  const syncedTimestamp = Math.max(
+    toTimestamp(syncedRecord && syncedRecord.clientUpdatedAt),
+    toTimestamp(syncedRecord && syncedRecord.updatedAt),
+    toTimestamp(syncedRecord && syncedRecord.createdAt)
+  );
+  return syncedTimestamp >= latestTimestamp;
+}
+
+function mergeEntryRecords(latestEntry, syncedEntry, hasPendingMutation) {
+  if (!syncedEntry) {
+    return { ...latestEntry };
+  }
+
+  if (!latestEntry) {
+    return { ...syncedEntry };
+  }
+
+  if (hasPendingMutation) {
+    return {
+      ...syncedEntry,
+      ...latestEntry,
+      photoObjectPath: latestEntry.photoObjectPath || syncedEntry.photoObjectPath || '',
+      localPhotoPath: latestEntry.localPhotoPath || syncedEntry.localPhotoPath || '',
+      syncVersion: Math.max(Number(latestEntry.syncVersion || 0), Number(syncedEntry.syncVersion || 0)),
+      cloudTracked: !!latestEntry.cloudTracked || !!syncedEntry.cloudTracked,
+    };
+  }
+
+  const preferred = preferSyncedRecord(latestEntry, syncedEntry) ? syncedEntry : latestEntry;
+  const fallback = preferred === syncedEntry ? latestEntry : syncedEntry;
+
+  return {
+    ...preferred,
+    photoObjectPath: preferred.photoObjectPath || fallback.photoObjectPath || '',
+    localPhotoPath: preferred.localPhotoPath || fallback.localPhotoPath || '',
+    syncVersion: Math.max(Number(latestEntry.syncVersion || 0), Number(syncedEntry.syncVersion || 0)),
+    cloudTracked: !!latestEntry.cloudTracked || !!syncedEntry.cloudTracked,
+  };
+}
+
+function mergeTaskRecords(latestTask, syncedTask, hasPendingMutation) {
+  if (!syncedTask) {
+    return { ...latestTask };
+  }
+
+  if (!latestTask) {
+    return { ...syncedTask };
+  }
+
+  if (hasPendingMutation) {
+    return {
+      ...syncedTask,
+      ...latestTask,
+      syncVersion: Math.max(Number(latestTask.syncVersion || 0), Number(syncedTask.syncVersion || 0)),
+      cloudTracked: !!latestTask.cloudTracked || !!syncedTask.cloudTracked,
+    };
+  }
+
+  const preferred = preferSyncedRecord(latestTask, syncedTask) ? syncedTask : latestTask;
+  return {
+    ...preferred,
+    syncVersion: Math.max(Number(latestTask.syncVersion || 0), Number(syncedTask.syncVersion || 0)),
+    cloudTracked: !!latestTask.cloudTracked || !!syncedTask.cloudTracked,
+  };
+}
+
+function rebaseSyncedState(latestState, syncedState, processedMutationIds) {
+  const latest = cloneState(latestState);
+  const synced = cloneState(syncedState);
+  const processedIds = new Set(processedMutationIds || []);
+  const remainingMutations = latest.pendingMutations.filter((mutation) => !processedIds.has(mutation.id));
+  const pendingEntityIndex = buildPendingEntityIndex(remainingMutations);
+
+  const entriesById = buildEntriesById(synced.entries);
+  latest.entries.forEach((entry) => {
+    const entityKey = getEntityQueueKey('entry', entry.id);
+    entriesById[entry.id] = mergeEntryRecords(
+      entry,
+      entriesById[entry.id],
+      !!pendingEntityIndex[entityKey]
+    );
+  });
+
+  const tasksById = buildTasksById(synced.tasks);
+  latest.tasks.forEach((task) => {
+    const entityKey = getEntityQueueKey('task', task.id);
+    tasksById[task.id] = mergeTaskRecords(
+      task,
+      tasksById[task.id],
+      !!pendingEntityIndex[entityKey]
+    );
+  });
+
+  return {
+    entries: Object.keys(entriesById).map((id) => entriesById[id]),
+    tasks: Object.keys(tasksById).map((id) => tasksById[id]),
+    pendingMutations: remainingMutations,
+    lastSyncedVersion: Math.max(
+      Number(latest.lastSyncedVersion || 0),
+      Number(synced.lastSyncedVersion || 0)
+    ),
+    authSession: synced.authSession || latest.authSession || null,
+    mediaCacheIndex: {
+      ...latest.mediaCacheIndex,
+      ...synced.mediaCacheIndex,
+    },
+  };
 }
 
 function buildPushMutations(state) {
@@ -237,10 +375,12 @@ async function syncState(state) {
   if (!cloudConfig.isConfigured() || !state || !state.authSession) {
     return {
       state,
+      processedMutationIds: [],
     };
   }
 
   let workingState = cloneState(state);
+  let processedMutationIds = [];
   if (cloudAuth.shouldRefreshSession(workingState.authSession)) {
     workingState.authSession = await cloudAuth.refreshSession(workingState.authSession);
   }
@@ -252,9 +392,12 @@ async function syncState(state) {
     const pushResult = await authorizedPost(workingState.authSession, 'sync-push', {
       mutations: pushPayload,
     });
-    workingState.pendingMutations = removeMutationIds(workingState.pendingMutations, [
+    processedMutationIds = [
       ...(pushResult.appliedMutationIds || []),
       ...(pushResult.ignoredMutationIds || []),
+    ];
+    workingState.pendingMutations = removeMutationIds(workingState.pendingMutations, [
+      ...processedMutationIds,
     ]);
   }
 
@@ -273,9 +416,11 @@ async function syncState(state) {
 
   return {
     state: workingState,
+    processedMutationIds,
   };
 }
 
 module.exports = {
+  rebaseSyncedState,
   syncState,
 };

@@ -10,7 +10,7 @@
       <text class="hero-kicker">首次启动需先完成协议确认</text>
       <text class="hero-title launch-title">继续使用前，请先阅读《隐私政策》和《用户协议》。</text>
       <text class="hero-body launch-body">
-        为了满足上架合规要求，在你明确同意前，小程序不会恢复本地业务状态，也不会触发云端登录、拍照或日历相关能力。
+        在你明确同意前，小程序不会恢复本地业务状态，也不会触发云端登录、拍照或日历相关能力。
       </text>
     </view>
 
@@ -19,11 +19,6 @@
       <view class="action-row action-row--pair">
         <button class="action-button secondary-button small-button" bindtap="openPrivacy">查看隐私政策</button>
         <button class="action-button ghost-button small-button" bindtap="openTerms">查看用户协议</button>
-      </view>
-      <view class="launch-note-card">
-        <text class="launch-note-text">
-          公开官网与法律页面已经准备好，后续上架填写时可直接使用公开链接。当前支持方式仍是占位文本，正式上架前请记得替换。
-        </text>
       </view>
     </view>
 

@@ -19,6 +19,7 @@ import '../services/calendar_service.dart';
 import '../services/media_repository.dart';
 import '../services/sync_queue_store.dart';
 import '../services/sync_service.dart';
+import '../services/sync_state_rebaser.dart';
 import '../utils/date_utils.dart' as farmer_date;
 
 class SaveEntryResult {
@@ -740,7 +741,12 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final result = await _syncService.synchronize(_currentState);
       _lastSyncedAt = DateTime.now().toUtc();
-      await _applyState(result.state, shouldNotify: false);
+      final rebasedState = SyncStateRebaser.rebase(
+        latestState: _currentState,
+        syncedState: result.state,
+        processedMutationIds: result.processedMutationIds,
+      );
+      await _applyState(rebasedState, shouldNotify: false);
       notifyListeners();
     } catch (error) {
       if (await _handleInvalidSessionError(error)) {
@@ -794,7 +800,12 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final result = await _syncService.synchronize(_currentState);
       _lastSyncedAt = DateTime.now().toUtc();
-      await _applyState(result.state, shouldNotify: false);
+      final rebasedState = SyncStateRebaser.rebase(
+        latestState: _currentState,
+        syncedState: result.state,
+        processedMutationIds: result.processedMutationIds,
+      );
+      await _applyState(rebasedState, shouldNotify: false);
       notifyListeners();
     } catch (error) {
       if (await _handleInvalidSessionError(error)) {
