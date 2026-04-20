@@ -230,26 +230,30 @@ class BottomPillNavigation extends StatelessWidget {
           children: List<Widget>.generate(items.length, (index) {
             final isActive = currentIndex == index;
             return Expanded(
-              child: GestureDetector(
-                onTap: () => onTap(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  height: isCompact ? 40 : 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFFFAF6ED)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    items[index],
-                    style: TextStyle(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => onTap(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    height: isCompact ? 40 : 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFF383425)
-                          : const Color(0xFF625D4B),
-                      fontSize: isCompact ? 14 : 15,
-                      fontWeight: FontWeight.w700,
+                          ? const Color(0xFFFAF6ED)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      items[index],
+                      style: TextStyle(
+                        color: isActive
+                            ? const Color(0xFF383425)
+                            : const Color(0xFF625D4B),
+                        fontSize: isCompact ? 14 : 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

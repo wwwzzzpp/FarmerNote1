@@ -16,9 +16,15 @@
   width: 100%;
   display: flex;
   align-items: center;
-  padding: 8rpx 0;
+  justify-content: space-between;
+  padding: 18rpx 0;
   background: transparent;
   border-bottom: 1px solid #e5dcc8;
+  text-align: left;
+}
+
+.settings-tile--pressed {
+  opacity: 0.82;
 }
 
 .settings-tile--last {
@@ -27,7 +33,11 @@
 
 .settings-tile-main {
   flex: 1;
+  width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   text-align: left;
 }
 
@@ -50,6 +60,7 @@
   margin-left: 20rpx;
   font-size: 38rpx;
   color: #8b836f;
+  flex-shrink: 0;
 }
 
 .settings-section-title {
