@@ -632,6 +632,36 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<void> signOut() async {
+    if (_isAuthenticating || _isSyncing) {
+      throw Exception('当前还有登录或同步进行中，请稍后再试。');
+    }
+
+    _cloudError = '';
+    _lastSyncedAt = null;
+    _accountDeletionStatus = AccountDeletionStatus.none();
+
+    final signedOutEntries = _entries
+        .map((entry) => entry.copyWith(cloudTracked: false))
+        .toList();
+    final signedOutTasks = _tasks
+        .map((task) => task.copyWith(cloudTracked: false))
+        .toList();
+
+    await _applyState(
+      StoredAppState(
+        entries: signedOutEntries,
+        tasks: signedOutTasks,
+        pendingMutations: const <SyncMutation>[],
+        lastSyncedVersion: 0,
+        authSession: null,
+        mediaCacheIndex: _mediaCacheIndex,
+      ),
+      shouldNotify: false,
+    );
+    notifyListeners();
+  }
+
   Future<AccountDeletionStatus> loadAccountDeletionStatus() async {
     if (_authSession == null) {
       _accountDeletionStatus = AccountDeletionStatus.none();

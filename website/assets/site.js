@@ -1,7 +1,7 @@
 window.FARMERNOTE_SITE = {
   productName: '初芽巡田',
   productShortName: 'FarmerNote',
-  websiteUrl: 'https://wwwzzzpp.github.io/FarmerNote1/',
+  websiteUrl: 'https://web-t.chuya.wang/',
   supportText: '待补充公开联系方式',
   supportHint: '正式上架前，请把这里替换成公开邮箱、客服电话或客服微信。',
   supportEmail: '待补充公开邮箱',

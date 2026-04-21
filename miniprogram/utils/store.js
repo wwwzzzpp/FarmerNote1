@@ -35,6 +35,24 @@ function getEmptyAccountDeletionStatus() {
   };
 }
 
+function detachCloudState(state) {
+  const nextState = state || getDefaultState();
+  return {
+    ...nextState,
+    entries: sanitizeEntries(nextState.entries).map((entry) => ({
+      ...entry,
+      cloudTracked: false,
+    })),
+    tasks: sanitizeTasks(nextState.tasks).map((task) => ({
+      ...task,
+      cloudTracked: false,
+    })),
+    pendingMutations: [],
+    lastSyncedVersion: 0,
+    authSession: null,
+  };
+}
+
 function sanitizeEntries(entries) {
   if (!Array.isArray(entries)) {
     return [];
@@ -932,6 +950,18 @@ async function syncNow() {
   }
 }
 
+function signOutFromCloud() {
+  if (signInInFlight || syncInFlight) {
+    throw new Error('当前还有登录或同步进行中，请稍后再试。');
+  }
+
+  const state = loadState();
+  persistState(detachCloudState(state));
+  lastSyncAt = '';
+  lastSyncError = '';
+  return getAccountProfileSummary();
+}
+
 async function clearAllLocalMedia(state) {
   const localPhotoPaths = state.entries
     .map((entry) => String(entry.localPhotoPath || '').trim())
@@ -1017,6 +1047,7 @@ module.exports = {
   requestAccountDeletionWithWeChat,
   sendAccountDeletionPhoneCode,
   sendPhoneCodeToCloud,
+  signOutFromCloud,
   signInToCloud,
   signInToCloudWithPhone,
   syncNow,

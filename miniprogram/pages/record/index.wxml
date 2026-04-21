@@ -88,7 +88,7 @@
     <view class="note-composer">
       <textarea
         class="textarea textarea--compact"
-        placeholder="提醒我东南角麦苗偏黄，沟边有积水。&#10;下午三点再去补看。"
+        placeholder="提醒我东南角麦苗偏黄，沟边有积水。下午三点再去补看。"
         value="{{noteText}}"
         bindinput="handleNoteInput"
         bindlinechange="handleNoteLineChange"

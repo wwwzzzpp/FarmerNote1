@@ -36,7 +36,7 @@
       <button class="action-button secondary-button small-button" bindtap="copyWebsiteUrl">复制官网地址</button>
     </view>
 
-    <text class="section-title settings-section-title">公开支持方式</text>
+    <text class="section-title settings-section-title">联系方式</text>
     <text class="settings-support-contact">{{supportContact}}</text>
     <text class="helper-text">{{supportHint}}</text>
   </view>
@@ -44,6 +44,12 @@
   <view class="section-card settings-version-card">
     <text class="section-title">当前版本</text>
     <text class="settings-version-text">v{{appVersion}}</text>
+  </view>
+
+  <view wx:if="{{account.isSignedIn}}" class="section-card">
+    <view class="action-row action-row--single">
+      <button class="action-button danger-button small-button" bindtap="handleSignOut">退出登录</button>
+    </view>
   </view>
 
   <view class="nav-bar">

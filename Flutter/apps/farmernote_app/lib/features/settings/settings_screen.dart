@@ -45,6 +45,45 @@ class SettingsScreen extends StatelessWidget {
     return '当前账号还没有完成登录方式绑定。';
   }
 
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('退出登录'),
+            content: const Text(
+              '退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('退出登录'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed || !context.mounted) {
+      return;
+    }
+
+    try {
+      await controller.signOut();
+      if (context.mounted) {
+        showAppSnackBar(context, '已退出登录');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        showAppSnackBar(context, error.toString().replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -229,6 +268,18 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (controller.isSignedIn)
+              ScreenSectionCard(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FarmerButton(
+                    label: '退出登录',
+                    tone: FarmerButtonTone.danger,
+                    small: true,
+                    onPressed: () => _confirmSignOut(context),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

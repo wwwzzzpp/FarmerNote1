@@ -59,6 +59,34 @@ Page({
     });
   },
 
+  handleSignOut() {
+    wx.showModal({
+      title: '退出登录',
+      content: '退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。',
+      confirmText: '退出登录',
+      confirmColor: '#b42318',
+      success: (result) => {
+        if (!result.confirm) {
+          return;
+        }
+
+        try {
+          store.signOutFromCloud();
+          this.setData(getPageState());
+          wx.showToast({
+            title: '已退出登录',
+            icon: 'success',
+          });
+        } catch (error) {
+          wx.showToast({
+            title: (error && error.message) || '退出登录失败',
+            icon: 'none',
+          });
+        }
+      },
+    });
+  },
+
   goRecord() {
     wx.redirectTo({
       url: '/pages/record/index',
