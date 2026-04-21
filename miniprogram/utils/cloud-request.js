@@ -42,17 +42,62 @@ function readErrorPayload(payload, statusCode) {
   };
 }
 
+function shouldLogHttp() {
+  try {
+    const accountInfo = wx.getAccountInfoSync();
+    const envVersion =
+      accountInfo &&
+      accountInfo.miniProgram &&
+      accountInfo.miniProgram.envVersion;
+    return envVersion !== 'release';
+  } catch (error) {
+    return true;
+  }
+}
+
+function startHttpLog(method, url) {
+  if (!shouldLogHttp()) {
+    return 0;
+  }
+
+  console.log(`[HTTP] ${method} ${url}`);
+  return Date.now();
+}
+
+function finishHttpLog(method, url, startedAt, statusCode) {
+  if (!shouldLogHttp()) {
+    return;
+  }
+
+  const duration = startedAt > 0 ? Date.now() - startedAt : 0;
+  console.log(`[HTTP] ${statusCode} ${method} ${url} (${duration}ms)`);
+}
+
+function failHttpLog(method, url, startedAt, error, statusCode) {
+  if (!shouldLogHttp()) {
+    return;
+  }
+
+  const duration = startedAt > 0 ? Date.now() - startedAt : 0;
+  const statusLabel = typeof statusCode === 'number' ? `ERROR ${statusCode}` : 'ERROR';
+  console.warn(`[HTTP] ${statusLabel} ${method} ${url} (${duration}ms)`, error);
+}
+
 function requestJson(options) {
   return new Promise((resolve, reject) => {
+    const method = options.method || 'GET';
+    const startedAt = startHttpLog(method, options.url);
+
     wx.request({
       url: options.url,
-      method: options.method || 'GET',
+      method,
       data: options.data,
       header: options.header,
       timeout: options.timeout || 15000,
       success: ({ statusCode, data }) => {
         const payload = normalizePayload(data);
         if (statusCode < 200 || statusCode >= 300) {
+          failHttpLog(method, options.url, startedAt, payload, statusCode);
           const errorPayload = readErrorPayload(payload, statusCode);
           reject(
             buildError(
@@ -67,9 +112,11 @@ function requestJson(options) {
           return;
         }
 
+        finishHttpLog(method, options.url, startedAt, statusCode);
         resolve(payload);
       },
       fail: (error) => {
+        failHttpLog(method, options.url, startedAt, error);
         reject(buildError('network_failed', '网络请求失败，请稍后再试。', error));
       },
     });
@@ -78,15 +125,19 @@ function requestJson(options) {
 
 function requestRaw(options) {
   return new Promise((resolve, reject) => {
+    const method = options.method || 'GET';
+    const startedAt = startHttpLog(method, options.url);
+
     wx.request({
       url: options.url,
-      method: options.method || 'GET',
+      method,
       data: options.data,
       header: options.header,
       responseType: options.responseType,
       timeout: options.timeout || 30000,
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
+          failHttpLog(method, options.url, startedAt, response, response.statusCode);
           reject(
             buildError(
               'request_failed',
@@ -97,9 +148,11 @@ function requestRaw(options) {
           return;
         }
 
+        finishHttpLog(method, options.url, startedAt, response.statusCode);
         resolve(response);
       },
       fail: (error) => {
+        failHttpLog(method, options.url, startedAt, error);
         reject(buildError('network_failed', '网络请求失败，请稍后再试。', error));
       },
     });
@@ -133,16 +186,21 @@ function readFileBuffer(filePath) {
 
 function downloadFile(url) {
   return new Promise((resolve, reject) => {
+    const startedAt = startHttpLog('GET', url);
+
     wx.downloadFile({
       url,
       success: ({ statusCode, tempFilePath }) => {
         if (statusCode < 200 || statusCode >= 300 || !tempFilePath) {
+          failHttpLog('GET', url, startedAt, 'download_failed', statusCode);
           reject(buildError('download_failed', '下载云端图片失败。'));
           return;
         }
+        finishHttpLog('GET', url, startedAt, statusCode);
         resolve(tempFilePath);
       },
       fail: (error) => {
+        failHttpLog('GET', url, startedAt, error);
         reject(buildError('download_failed', '下载云端图片失败。', error));
       },
     });

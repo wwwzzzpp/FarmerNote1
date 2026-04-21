@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../config/cloud_config.dart';
 import '../models/account_deletion_status.dart';
 import '../models/auth_session.dart';
+import 'http_debug_logger.dart';
 
 class AuthServiceException implements Exception {
   const AuthServiceException(this.code, this.message, {this.statusCode});
@@ -281,13 +282,29 @@ class AuthService {
       headers['Authorization'] = 'Bearer ${bearerToken.trim()}';
     }
 
-    final response = await _client.post(
-      CloudConfig.functionUri(endpoint),
-      headers: headers,
-      body: jsonEncode(body),
-    );
+    final uri = CloudConfig.functionUri(endpoint);
+    final stopwatch = HttpDebugLogger.start('POST', uri);
+    late final http.Response response;
+    try {
+      response = await _client.post(
+        uri,
+        headers: headers,
+        body: jsonEncode(body),
+      );
+    } catch (error) {
+      HttpDebugLogger.failure('POST', uri, stopwatch, error);
+      rethrow;
+    }
+
     final payload = _decodeResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'POST',
+        uri,
+        stopwatch,
+        'request_failed',
+        statusCode: response.statusCode,
+      );
       final errorInfo = _readErrorInfo(
         payload,
         fallbackCode: 'request_failed',
@@ -299,6 +316,7 @@ class AuthService {
         statusCode: response.statusCode,
       );
     }
+    HttpDebugLogger.success('POST', uri, stopwatch, response.statusCode);
     return payload;
   }
 

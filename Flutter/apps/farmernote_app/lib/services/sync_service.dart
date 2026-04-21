@@ -9,6 +9,7 @@ import '../models/stored_app_state.dart';
 import '../models/sync_mutation.dart';
 import '../models/task_record.dart';
 import 'auth_service.dart';
+import 'http_debug_logger.dart';
 import 'media_repository.dart';
 import 'sync_queue_store.dart';
 
@@ -303,16 +304,32 @@ class SyncService {
     required String endpoint,
     required Map<String, dynamic> body,
   }) async {
-    final response = await _client.post(
-      CloudConfig.functionUri(endpoint),
-      headers: <String, String>{
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
+    final uri = CloudConfig.functionUri(endpoint);
+    final stopwatch = HttpDebugLogger.start('POST', uri);
+    late final http.Response response;
+    try {
+      response = await _client.post(
+        uri,
+        headers: <String, String>{
+          'Authorization': 'Bearer ${session.accessToken}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+    } catch (error) {
+      HttpDebugLogger.failure('POST', uri, stopwatch, error);
+      rethrow;
+    }
+
     final payload = _decodeResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'POST',
+        uri,
+        stopwatch,
+        'sync_failed',
+        statusCode: response.statusCode,
+      );
       final errorInfo = _readErrorInfo(
         payload,
         fallbackCode: 'sync_failed',
@@ -324,6 +341,7 @@ class SyncService {
         statusCode: response.statusCode,
       );
     }
+    HttpDebugLogger.success('POST', uri, stopwatch, response.statusCode);
     return payload;
   }
 
