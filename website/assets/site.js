@@ -35,4 +35,22 @@ window.FARMERNOTE_SITE = {
   document.querySelectorAll('[data-deletion-days]').forEach((node) => {
     node.textContent = String(config.deletionWindowDays);
   });
+
+  // Download section tabs logic
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const header = e.currentTarget.closest('.tabs-header');
+      header.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      
+      const panel = e.currentTarget.closest('.download-panel');
+      panel.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      
+      const targetId = e.currentTarget.getAttribute('data-target');
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) {
+        targetPane.classList.add('active');
+      }
+    });
+  });
 })();

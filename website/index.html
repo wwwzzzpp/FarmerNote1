@@ -27,6 +27,7 @@
             </span>
           </a>
           <nav class="nav" aria-label="官网导航">
+            <a href="#download" style="color: var(--accent-deep); font-weight: 600;">立即下载</a>
             <a href="#features">功能亮点</a>
             <a href="#scenes">使用场景</a>
             <a href="#about">关于我们</a>
@@ -48,10 +49,6 @@
                 初芽巡田 FarmerNote
                 为农事巡查做了更轻的记录入口：两行文字、现场照片、提醒时间和后续待办，会被整理成一条清楚的时间线，并在你登录同一个账号后跨端同步。
               </p>
-              <div class="hero__actions">
-                <a class="button" href="privacy.html">查看隐私政策</a>
-                <a class="ghost-button" href="account-deletion.html">查看注销说明</a>
-              </div>
               <!-- <div class="hero__facts">
                 <div class="fact">
                   <strong>2</strong>
@@ -68,13 +65,68 @@
               </div> -->
             </div>
 
-            <div class="hero__visual hero__card">
-              <div class="screen-frame">
-                <div class="screen-frame__top" aria-hidden="true"></div>
-                <img
-                  src="assets/app-preview.png"
-                  alt="初芽巡田记录页界面预览"
-                />
+            <div class="hero__visual">
+              <div class="phone-mockups">
+                <div class="phone-mockup phone-mockup--left">
+                  <div class="phone-mockup__inner">
+                    <img src="assets/app-screen-1.png" alt="界面预览 1" />
+                  </div>
+                </div>
+                <div class="phone-mockup phone-mockup--center">
+                  <div class="phone-mockup__inner">
+                    <img src="assets/app-screen-2.png" alt="界面预览 2" />
+                  </div>
+                </div>
+                <div class="phone-mockup phone-mockup--right">
+                  <div class="phone-mockup__inner">
+                    <img src="assets/app-screen-3.png" alt="界面预览 3" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="download" style="padding-top: 16px;">
+          <div class="section__intro">
+            <div>
+              <p class="eyebrow">Download</p>
+              <h2>立即下载与体验</h2>
+            </div>
+            <p class="section__lead">
+              选择适合您的平台，立即开始更轻松、更敏捷的农事记录。
+            </p>
+          </div>
+
+          <div class="panel download-panel">
+            <div class="tabs-header">
+              <button class="tab-btn active" data-target="tab-android">Android 端</button>
+              <button class="tab-btn" data-target="tab-mini">微信小程序</button>
+              <button class="tab-btn" data-target="tab-ios">iOS 端</button>
+            </div>
+            
+            <div class="tabs-content">
+              <div class="tab-pane active" id="tab-android">
+                <div class="qr-wrapper">
+                  <div class="qr-placeholder" style="margin: 0 auto;">
+                    Android 二维码占位图
+                  </div>
+                  <p>扫码下载 Android 安装包</p>
+                </div>
+              </div>
+              <div class="tab-pane" id="tab-mini">
+                <div class="qr-wrapper">
+                  <div class="qr-placeholder" style="margin: 0 auto;">
+                    小程序二维码占位图
+                  </div>
+                  <p>微信扫一扫，即开即用</p>
+                </div>
+              </div>
+              <div class="tab-pane" id="tab-ios">
+                <div class="empty-state">
+                  <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                  <p style="margin-top: 12px; font-size: 16px;">iOS 版本正在开发中，敬请期待</p>
+                </div>
               </div>
             </div>
           </div>
@@ -161,42 +213,32 @@
         <section class="section">
           <div class="section__intro">
             <div>
-              <p class="eyebrow">Compliance</p>
-              <h2>合规能力不是附属页，而是产品本身的一部分</h2>
+              <p class="eyebrow">Data Security</p>
+              <h2>数据安全与隐私保护</h2>
             </div>
             <p class="section__lead">
-              我们把隐私提示、协议链接和账号注销链路都做成了产品内能力。
+              我们深知农业数据的重要性，在设计之初就为您提供了可靠的安全保障机制。
             </p>
           </div>
 
           <div class="compliance-grid">
             <article class="panel">
-              <h3>首次启动协议拦截</h3>
+              <h3>透明且可控的隐私权限</h3>
               <ul>
-                <li>首次冷启动必须先看到《隐私政策》和《用户协议》提示。</li>
-                <li>在你点击“同意并继续”之前，不初始化第三方插件，不恢复业务本地状态。</li>
-                <li>摄像头、系统日历等权限保持按功能触发，不做开机申请。</li>
+                <li>应用严格遵循最小权限原则，坚决不随意索取非必要权限。</li>
+                <li>在您明确同意前，我们不会自动收集个人及业务记录。</li>
+                <li>提供彻底的账号注销机制：支持随时发起注销，冷静期结束后将自动彻底清空云端数据，把数据控制权交还给您。</li>
               </ul>
             </article>
             <article class="panel">
-              <h3>可直接访问的公开页面</h3>
+              <h3>各项基本业务及合规规范</h3>
+              <p style="margin-bottom: 12px; color: var(--muted); line-height: 1.75;">我们向每位用户提供公开、透明的服务准则，可随时查阅：</p>
               <ul>
-                <li><a class="muted-link" href="privacy.html">隐私政策</a></li>
-                <li><a class="muted-link" href="terms.html">用户协议</a></li>
+                <li><a class="muted-link" href="privacy.html">《初芽巡田隐私政策》</a></li>
+                <li><a class="muted-link" href="terms.html">《初芽巡田用户协议》</a></li>
                 <li><a class="muted-link" href="account-deletion.html">账号注销说明</a></li>
-                <li>官网计划先挂 GitHub Pages，后续可平滑迁移到自定义域名。</li>
               </ul>
             </article>
-          </div>
-
-          <div class="cta-strip">
-            <div>
-              <strong>上架资料链接先从这里准备好</strong>
-              <p>
-                如果你正在准备安卓应用市场资料，优先把这三个公开页面放进审核材料里，同时确认支持联系方式已经替换成正式公开信息。
-              </p>
-            </div>
-            <a class="button" href="terms.html">查看用户协议</a>
           </div>
         </section>
 
@@ -224,6 +266,21 @@
             <p>
               我们的团队是一群热爱农业、钻研技术且信仰“化繁为简”的实干者。目前，初芽巡田仍在持续打磨与迭代之中。如果您同样关注农业现场的数字化落地，无论是擅长前端开发、后端架构、产品设计，还是对农业现场管理拥有独到经验，只要您认同我们“用技术解决一线真实痛点”的理念，我们都诚挚地期待您建立联系。让我们携手同行，将真正好用的系统带到田间地头。
             </p>
+
+            <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--line);">
+              <h3 style="margin-bottom: 16px;">联系我们</h3>
+              <p>如果您对初芽巡田感兴趣，或者遇到任何使用问题，亦或是希望加入我们，欢迎通过以下方式取得联系：</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 32px; margin-top: 24px; align-items: start;">
+                <div>
+                  <p style="margin: 0 0 12px; font-size: 16px; color: var(--ink);"><strong>微信号：</strong> CHUYA_2020</p>
+                  <p style="margin: 0; font-size: 16px; color: var(--ink);"><strong>电子邮箱：</strong> <a href="mailto:wwwzzzpp@126.com" class="muted-link">wwwzzzpp@126.com</a></p>
+                </div>
+                <div style="border: 1px solid rgba(188, 174, 134, 0.42); border-radius: 16px; padding: 12px; background: #fff; width: fit-content; text-align: center;">
+                  <img src="assets/qrcode.png" alt="微信二维码" style="width: 140px; height: 140px; object-fit: cover; display: block;" />
+                  <span style="display: block; margin-top: 8px; font-size: 13px; color: var(--muted);">扫码添加微信</span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -234,7 +291,7 @@
               <h2>常见问题</h2>
             </div>
             <p class="section__lead">
-              下面这几条，是你在接入、上架和使用阶段最容易问到的内容。
+              这里汇总了初芽巡田在使用过程中大家最常问到的几个问题。
             </p>
           </div>
 
@@ -268,12 +325,12 @@
           <div>
             <h2>初芽巡田 FarmerNote</h2>
             <p>
-              面向巡田记录、待办追踪与跨端同步的轻量工具。当前公开站点用于提供产品介绍、协议页面与账号注销说明。
+              面向巡田记录、待办追踪与跨端同步的轻量工具，让每一次田间发现都能稳稳落到实处。
             </p>
-            <p class="note">
-              当前公开支持方式：
-              <strong data-support-text>待补充公开联系方式</strong>。
-              <span data-support-hint></span>
+            <p class="note" style="margin-top: 16px;">
+              需要帮助？请随时联系我们：<br />
+              <strong>微信：</strong> CHUYA_2020<br />
+              <strong>邮箱：</strong> wwwzzzpp@126.com
             </p>
           </div>
 
@@ -281,10 +338,6 @@
             <li><a class="muted-link" href="privacy.html">隐私政策</a></li>
             <li><a class="muted-link" href="terms.html">用户协议</a></li>
             <li><a class="muted-link" href="account-deletion.html">账号注销说明</a></li>
-            <li>
-              官网发布地址：
-              <a class="muted-link" data-website-url href="#"></a>
-            </li>
           </ul>
         </div>
       </footer>
