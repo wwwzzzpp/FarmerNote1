@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/cloud_config.dart';
 import '../models/auth_session.dart';
+import 'http_debug_logger.dart';
 
 class MediaRepositoryException implements Exception {
   const MediaRepositoryException(this.code, this.message, {this.statusCode});
@@ -87,20 +88,35 @@ class MediaRepository {
 
     final contentType = _inferContentType(localPath);
     final extension = _inferExtension(localPath);
-    final ticketResponse = await _client.post(
-      CloudConfig.functionUri('media-upload-ticket'),
-      headers: <String, String>{
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'contentType': contentType,
-        'fileExtension': extension,
-      }),
-    );
+    final ticketUri = CloudConfig.functionUri('media-upload-ticket');
+    final ticketStopwatch = HttpDebugLogger.start('POST', ticketUri);
+    late final http.Response ticketResponse;
+    try {
+      ticketResponse = await _client.post(
+        ticketUri,
+        headers: <String, String>{
+          'Authorization': 'Bearer ${session.accessToken}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'contentType': contentType,
+          'fileExtension': extension,
+        }),
+      );
+    } catch (error) {
+      HttpDebugLogger.failure('POST', ticketUri, ticketStopwatch, error);
+      rethrow;
+    }
 
     final ticketPayload = _decodeResponse(ticketResponse);
     if (ticketResponse.statusCode < 200 || ticketResponse.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'POST',
+        ticketUri,
+        ticketStopwatch,
+        'upload_ticket_failed',
+        statusCode: ticketResponse.statusCode,
+      );
       final errorInfo = _readErrorInfo(
         ticketPayload,
         fallbackCode: 'upload_ticket_failed',
@@ -112,6 +128,12 @@ class MediaRepository {
         statusCode: ticketResponse.statusCode,
       );
     }
+    HttpDebugLogger.success(
+      'POST',
+      ticketUri,
+      ticketStopwatch,
+      ticketResponse.statusCode,
+    );
 
     final uploadUrl = (ticketPayload['uploadUrl'] ?? '').toString();
     final objectPath = (ticketPayload['objectPath'] ?? '').toString();
@@ -122,19 +144,40 @@ class MediaRepository {
       );
     }
 
-    final uploadResponse = await _client.put(
-      Uri.parse(uploadUrl),
-      headers: <String, String>{'Content-Type': contentType},
-      body: await file.readAsBytes(),
-    );
+    final uploadUri = Uri.parse(uploadUrl);
+    final uploadStopwatch = HttpDebugLogger.start('PUT', uploadUri);
+    late final http.Response uploadResponse;
+    try {
+      uploadResponse = await _client.put(
+        uploadUri,
+        headers: <String, String>{'Content-Type': contentType},
+        body: await file.readAsBytes(),
+      );
+    } catch (error) {
+      HttpDebugLogger.failure('PUT', uploadUri, uploadStopwatch, error);
+      rethrow;
+    }
 
     if (uploadResponse.statusCode < 200 || uploadResponse.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'PUT',
+        uploadUri,
+        uploadStopwatch,
+        'upload_failed',
+        statusCode: uploadResponse.statusCode,
+      );
       final responseBody = uploadResponse.body.trim();
       final detail = responseBody.isEmpty
           ? '状态码 ${uploadResponse.statusCode}'
           : '状态码 ${uploadResponse.statusCode}，响应：$responseBody';
       throw MediaRepositoryException('upload_failed', '上传图片到云端失败，$detail');
     }
+    HttpDebugLogger.success(
+      'PUT',
+      uploadUri,
+      uploadStopwatch,
+      uploadResponse.statusCode,
+    );
 
     return objectPath;
   }
@@ -152,17 +195,32 @@ class MediaRepository {
       return targetFile.path;
     }
 
-    final ticketResponse = await _client.post(
-      CloudConfig.functionUri('media-download-ticket'),
-      headers: <String, String>{
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(<String, dynamic>{'objectPath': objectPath}),
-    );
+    final ticketUri = CloudConfig.functionUri('media-download-ticket');
+    final ticketStopwatch = HttpDebugLogger.start('POST', ticketUri);
+    late final http.Response ticketResponse;
+    try {
+      ticketResponse = await _client.post(
+        ticketUri,
+        headers: <String, String>{
+          'Authorization': 'Bearer ${session.accessToken}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{'objectPath': objectPath}),
+      );
+    } catch (error) {
+      HttpDebugLogger.failure('POST', ticketUri, ticketStopwatch, error);
+      rethrow;
+    }
 
     final ticketPayload = _decodeResponse(ticketResponse);
     if (ticketResponse.statusCode < 200 || ticketResponse.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'POST',
+        ticketUri,
+        ticketStopwatch,
+        'download_ticket_failed',
+        statusCode: ticketResponse.statusCode,
+      );
       final errorInfo = _readErrorInfo(
         ticketPayload,
         fallbackCode: 'download_ticket_failed',
@@ -174,6 +232,12 @@ class MediaRepository {
         statusCode: ticketResponse.statusCode,
       );
     }
+    HttpDebugLogger.success(
+      'POST',
+      ticketUri,
+      ticketStopwatch,
+      ticketResponse.statusCode,
+    );
 
     final rawDownloadUrl = (ticketPayload['downloadUrl'] ?? '').toString();
     if (rawDownloadUrl.isEmpty) {
@@ -186,15 +250,36 @@ class MediaRepository {
     final resolvedUrl = rawDownloadUrl.startsWith('http')
         ? rawDownloadUrl
         : '${CloudConfig.storageOrigin}$rawDownloadUrl';
-    final downloadResponse = await _client.get(Uri.parse(resolvedUrl));
+    final downloadUri = Uri.parse(resolvedUrl);
+    final downloadStopwatch = HttpDebugLogger.start('GET', downloadUri);
+    late final http.Response downloadResponse;
+    try {
+      downloadResponse = await _client.get(downloadUri);
+    } catch (error) {
+      HttpDebugLogger.failure('GET', downloadUri, downloadStopwatch, error);
+      rethrow;
+    }
     if (downloadResponse.statusCode < 200 ||
         downloadResponse.statusCode >= 300) {
+      HttpDebugLogger.failure(
+        'GET',
+        downloadUri,
+        downloadStopwatch,
+        'download_failed',
+        statusCode: downloadResponse.statusCode,
+      );
       final responseBody = downloadResponse.body.trim();
       final detail = responseBody.isEmpty
           ? '状态码 ${downloadResponse.statusCode}'
           : '状态码 ${downloadResponse.statusCode}，响应：$responseBody';
       throw MediaRepositoryException('download_failed', '下载云端图片失败，$detail');
     }
+    HttpDebugLogger.success(
+      'GET',
+      downloadUri,
+      downloadStopwatch,
+      downloadResponse.statusCode,
+    );
 
     await targetFile.parent.create(recursive: true);
     await targetFile.writeAsBytes(downloadResponse.bodyBytes, flush: true);
