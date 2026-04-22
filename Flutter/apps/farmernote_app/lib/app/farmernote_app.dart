@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../features/plan/plan_screen.dart';
 import '../features/record/record_screen.dart';
 import '../features/settings/settings_screen.dart';
-import '../features/tasks/tasks_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/farmer_ui.dart';
@@ -73,8 +73,8 @@ class FarmerNoteScaffold extends StatelessWidget {
         index: controller.selectedTabIndex,
         children: <Widget>[
           RecordScreen(controller: controller),
+          PlanScreen(controller: controller),
           TimelineScreen(controller: controller),
-          TasksScreen(controller: controller),
           SettingsScreen(controller: controller),
         ],
       ),
@@ -86,10 +86,10 @@ class FarmerNoteScaffold extends StatelessWidget {
               controller.goToRecord();
               break;
             case 1:
-              controller.goToTimeline();
+              controller.goToPlan();
               break;
             case 2:
-              controller.goToTasks();
+              controller.goToTimeline();
               break;
             case 3:
               controller.goToMe();

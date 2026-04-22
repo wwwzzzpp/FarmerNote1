@@ -11,52 +11,59 @@ import 'package:farmernote_app/services/app_storage_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('signOut clears auth session and pending sync while keeping local data', () async {
-    final signedInState = StoredAppState(
-      entries: <EntryRecord>[
-        const EntryRecord(
-          id: 'entry-1',
-          noteText: '已同步的巡田记录',
-          photoObjectPath: '',
-          localPhotoPath: '',
-          createdAt: '2026-04-20T08:00:00.000Z',
-          updatedAt: '2026-04-20T08:00:00.000Z',
-          clientUpdatedAt: '2026-04-20T08:00:00.000Z',
-          deletedAt: null,
-          sourcePlatform: 'flutter_app',
-          syncVersion: 3,
-          cloudTracked: true,
-        ),
-      ],
-      tasks: const [],
-      pendingMutations: <SyncMutation>[
-        const SyncMutation(
-          id: 'mutation-1',
-          entityType: SyncEntityType.entry,
-          operation: SyncOperation.upsert,
-          entityId: 'entry-1',
-          payload: <String, dynamic>{'id': 'entry-1'},
-          clientUpdatedAt: '2026-04-20T08:00:00.000Z',
-        ),
-      ],
-      lastSyncedVersion: 9,
-      authSession: _session(),
-      mediaCacheIndex: const <String, String>{},
-    );
-    final storage = _FakeAppStorageService(signedInState);
-    final controller = FarmerNoteController(storageService: storage);
-    addTearDown(controller.dispose);
+  test(
+    'signOut clears auth session and pending sync while keeping local data',
+    () async {
+      final signedInState = StoredAppState(
+        entries: <EntryRecord>[
+          const EntryRecord(
+            id: 'entry-1',
+            noteText: '已同步的巡田记录',
+            photoObjectPath: '',
+            localPhotoPath: '',
+            createdAt: '2026-04-20T08:00:00.000Z',
+            updatedAt: '2026-04-20T08:00:00.000Z',
+            clientUpdatedAt: '2026-04-20T08:00:00.000Z',
+            deletedAt: null,
+            sourcePlatform: 'flutter_app',
+            planInstanceId: '',
+            planActionId: '',
+            syncVersion: 3,
+            cloudTracked: true,
+          ),
+        ],
+        tasks: const [],
+        cropPlanInstances: const [],
+        cropPlanActionProgresses: const [],
+        pendingMutations: <SyncMutation>[
+          const SyncMutation(
+            id: 'mutation-1',
+            entityType: SyncEntityType.entry,
+            operation: SyncOperation.upsert,
+            entityId: 'entry-1',
+            payload: <String, dynamic>{'id': 'entry-1'},
+            clientUpdatedAt: '2026-04-20T08:00:00.000Z',
+          ),
+        ],
+        lastSyncedVersion: 9,
+        authSession: _session(),
+        mediaCacheIndex: const <String, String>{},
+      );
+      final storage = _FakeAppStorageService(signedInState);
+      final controller = FarmerNoteController(storageService: storage);
+      addTearDown(controller.dispose);
 
-    await controller.initialize();
-    await controller.signOut();
+      await controller.initialize();
+      await controller.signOut();
 
-    expect(controller.isSignedIn, isFalse);
-    expect(controller.pendingCloudChangeCount, 0);
-    expect(controller.entries.single.cloudTracked, isFalse);
-    expect(storage.state.authSession, isNull);
-    expect(storage.state.pendingMutations, isEmpty);
-    expect(storage.state.lastSyncedVersion, 0);
-  });
+      expect(controller.isSignedIn, isFalse);
+      expect(controller.pendingCloudChangeCount, 0);
+      expect(controller.entries.single.cloudTracked, isFalse);
+      expect(storage.state.authSession, isNull);
+      expect(storage.state.pendingMutations, isEmpty);
+      expect(storage.state.lastSyncedVersion, 0);
+    },
+  );
 }
 
 class _FakeAppStorageService extends AppStorageService {

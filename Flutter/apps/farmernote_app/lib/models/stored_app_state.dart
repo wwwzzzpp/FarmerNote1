@@ -1,4 +1,6 @@
 import 'auth_session.dart';
+import 'crop_plan_action_progress.dart';
+import 'crop_plan_instance.dart';
 import 'entry_record.dart';
 import 'sync_mutation.dart';
 import 'task_record.dart';
@@ -7,6 +9,8 @@ class StoredAppState {
   const StoredAppState({
     required this.entries,
     required this.tasks,
+    required this.cropPlanInstances,
+    required this.cropPlanActionProgresses,
     required this.pendingMutations,
     required this.lastSyncedVersion,
     required this.authSession,
@@ -15,6 +19,8 @@ class StoredAppState {
 
   final List<EntryRecord> entries;
   final List<TaskRecord> tasks;
+  final List<CropPlanInstance> cropPlanInstances;
+  final List<CropPlanActionProgress> cropPlanActionProgresses;
   final List<SyncMutation> pendingMutations;
   final int lastSyncedVersion;
   final AuthSession? authSession;
@@ -24,6 +30,8 @@ class StoredAppState {
     return const StoredAppState(
       entries: <EntryRecord>[],
       tasks: <TaskRecord>[],
+      cropPlanInstances: <CropPlanInstance>[],
+      cropPlanActionProgresses: <CropPlanActionProgress>[],
       pendingMutations: <SyncMutation>[],
       lastSyncedVersion: 0,
       authSession: null,
@@ -34,6 +42,8 @@ class StoredAppState {
   factory StoredAppState.fromJson(Map<String, dynamic> json) {
     final rawEntries = json['entries'];
     final rawTasks = json['tasks'];
+    final rawPlanInstances = json['cropPlanInstances'];
+    final rawPlanActionProgresses = json['cropPlanActionProgresses'];
     final rawMutations = json['pendingMutations'];
     final rawMediaCacheIndex = json['mediaCacheIndex'];
 
@@ -60,6 +70,39 @@ class StoredAppState {
               )
               .toList()
         : <TaskRecord>[];
+
+    final cropPlanInstances = rawPlanInstances is List
+        ? rawPlanInstances
+              .whereType<Map<dynamic, dynamic>>()
+              .map(
+                (item) =>
+                    CropPlanInstance.fromJson(item.cast<String, dynamic>()),
+              )
+              .where(
+                (plan) =>
+                    plan.id.isNotEmpty &&
+                    plan.cropCode.isNotEmpty &&
+                    plan.anchorDate.isNotEmpty,
+              )
+              .toList()
+        : <CropPlanInstance>[];
+
+    final cropPlanActionProgresses = rawPlanActionProgresses is List
+        ? rawPlanActionProgresses
+              .whereType<Map<dynamic, dynamic>>()
+              .map(
+                (item) => CropPlanActionProgress.fromJson(
+                  item.cast<String, dynamic>(),
+                ),
+              )
+              .where(
+                (progress) =>
+                    progress.id.isNotEmpty &&
+                    progress.planInstanceId.isNotEmpty &&
+                    progress.actionId.isNotEmpty,
+              )
+              .toList()
+        : <CropPlanActionProgress>[];
 
     final pendingMutations = rawMutations is List
         ? rawMutations
@@ -92,6 +135,8 @@ class StoredAppState {
     return StoredAppState(
       entries: entries,
       tasks: tasks,
+      cropPlanInstances: cropPlanInstances,
+      cropPlanActionProgresses: cropPlanActionProgresses,
       pendingMutations: pendingMutations,
       lastSyncedVersion: json['lastSyncedVersion'] is int
           ? json['lastSyncedVersion'] as int
@@ -104,6 +149,12 @@ class StoredAppState {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'entries': entries.map((entry) => entry.toJson()).toList(),
     'tasks': tasks.map((task) => task.toJson()).toList(),
+    'cropPlanInstances': cropPlanInstances
+        .map((plan) => plan.toJson())
+        .toList(),
+    'cropPlanActionProgresses': cropPlanActionProgresses
+        .map((progress) => progress.toJson())
+        .toList(),
     'pendingMutations': pendingMutations
         .map((mutation) => mutation.toJson())
         .toList(),
@@ -115,6 +166,8 @@ class StoredAppState {
   StoredAppState copyWith({
     List<EntryRecord>? entries,
     List<TaskRecord>? tasks,
+    List<CropPlanInstance>? cropPlanInstances,
+    List<CropPlanActionProgress>? cropPlanActionProgresses,
     List<SyncMutation>? pendingMutations,
     int? lastSyncedVersion,
     AuthSession? authSession,
@@ -124,6 +177,9 @@ class StoredAppState {
     return StoredAppState(
       entries: entries ?? this.entries,
       tasks: tasks ?? this.tasks,
+      cropPlanInstances: cropPlanInstances ?? this.cropPlanInstances,
+      cropPlanActionProgresses:
+          cropPlanActionProgresses ?? this.cropPlanActionProgresses,
       pendingMutations: pendingMutations ?? this.pendingMutations,
       lastSyncedVersion: lastSyncedVersion ?? this.lastSyncedVersion,
       authSession: clearAuthSession ? null : authSession ?? this.authSession,

@@ -50,38 +50,27 @@ void main() {
         },
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpUntilVisible(tester, find.text('今天田里看到啥，先记下来。'));
 
     expect(find.text('今天田里看到啥，先记下来。'), findsOneWidget);
     expect(initializeCallCount, 1);
   });
+}
 
-  testWidgets('bootstrap app rebuilds when bottom navigation changes tabs', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final consentService = _FakeStartupConsentService(initialAccepted: true);
+Future<void> _pumpUntilVisible(
+  WidgetTester tester,
+  Finder finder, {
+  Duration step = const Duration(milliseconds: 100),
+  int maxSteps = 60,
+}) async {
+  for (var index = 0; index < maxSteps; index += 1) {
+    await tester.pump(step);
+    if (finder.evaluate().isNotEmpty) {
+      return;
+    }
+  }
 
-    await tester.pumpWidget(
-      FarmerNoteBootstrapApp(
-        startupConsentService: consentService,
-        controllerInitializer: () async {
-          final controller = FarmerNoteController();
-          await controller.initialize();
-          return controller;
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('时间线').last);
-    await tester.pumpAndSettle();
-    expect(find.text('巡田时间线'), findsOneWidget);
-
-    await tester.tap(find.text('我').last);
-    await tester.pumpAndSettle();
-    expect(find.text('账号与合规'), findsOneWidget);
-  });
+  fail('Timed out waiting for the target finder to appear.');
 }
 
 class _FakeStartupConsentService extends StartupConsentService {

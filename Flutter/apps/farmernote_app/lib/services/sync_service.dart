@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/cloud_config.dart';
 import '../models/auth_session.dart';
+import '../models/crop_plan_action_progress.dart';
+import '../models/crop_plan_instance.dart';
 import '../models/entry_record.dart';
 import '../models/stored_app_state.dart';
 import '../models/sync_mutation.dart';
@@ -191,6 +194,13 @@ class SyncService {
     final tasksById = <String, TaskRecord>{
       for (final task in state.tasks) task.id: task,
     };
+    final planInstancesById = <String, CropPlanInstance>{
+      for (final plan in state.cropPlanInstances) plan.id: plan,
+    };
+    final planActionProgressesById = <String, CropPlanActionProgress>{
+      for (final progress in state.cropPlanActionProgresses)
+        progress.id: progress,
+    };
 
     return state.pendingMutations.map((mutation) {
       Map<String, dynamic> payload = mutation.payload;
@@ -203,6 +213,16 @@ class SyncService {
         final task = tasksById[mutation.entityId];
         if (task != null) {
           payload = task.toCloudJson();
+        }
+      } else if (mutation.entityType == SyncEntityType.planInstance) {
+        final plan = planInstancesById[mutation.entityId];
+        if (plan != null) {
+          payload = plan.toCloudJson();
+        }
+      } else if (mutation.entityType == SyncEntityType.planActionProgress) {
+        final progress = planActionProgressesById[mutation.entityId];
+        if (progress != null) {
+          payload = progress.toCloudJson();
         }
       }
 
@@ -225,6 +245,13 @@ class SyncService {
     };
     final tasks = <String, TaskRecord>{
       for (final task in state.tasks) task.id: task,
+    };
+    final cropPlanInstances = <String, CropPlanInstance>{
+      for (final plan in state.cropPlanInstances) plan.id: plan,
+    };
+    final cropPlanActionProgresses = <String, CropPlanActionProgress>{
+      for (final progress in state.cropPlanActionProgresses)
+        progress.id: progress,
     };
     final mediaCacheIndex = Map<String, String>.from(state.mediaCacheIndex);
 
@@ -257,9 +284,35 @@ class SyncService {
       }
     }
 
+    final rawPlanInstances = payload['cropPlanInstances'];
+    if (rawPlanInstances is List) {
+      for (final item in rawPlanInstances.whereType<Map>()) {
+        final serverPlan = CropPlanInstance.fromJson(
+          item.cast<String, dynamic>(),
+        );
+        cropPlanInstances[serverPlan.id] = serverPlan.copyWith(
+          cloudTracked: true,
+        );
+      }
+    }
+
+    final rawPlanActionProgresses = payload['cropPlanActionProgresses'];
+    if (rawPlanActionProgresses is List) {
+      for (final item in rawPlanActionProgresses.whereType<Map>()) {
+        final serverProgress = CropPlanActionProgress.fromJson(
+          item.cast<String, dynamic>(),
+        );
+        cropPlanActionProgresses[serverProgress.id] = serverProgress.copyWith(
+          cloudTracked: true,
+        );
+      }
+    }
+
     return state.copyWith(
       entries: entries.values.toList(),
       tasks: tasks.values.toList(),
+      cropPlanInstances: cropPlanInstances.values.toList(),
+      cropPlanActionProgresses: cropPlanActionProgresses.values.toList(),
       lastSyncedVersion: payload['nextSyncedVersion'] is int
           ? payload['nextSyncedVersion'] as int
           : int.tryParse((payload['nextSyncedVersion'] ?? '').toString()) ??
@@ -284,13 +337,21 @@ class SyncService {
         continue;
       }
 
-      final localPhotoPath = await _mediaRepository.ensureDownloadedPhoto(
-        session: session,
-        objectPath: entry.photoObjectPath,
-      );
-      entries[index] = entry.copyWith(localPhotoPath: localPhotoPath);
-      mediaCacheIndex[entry.photoObjectPath] = localPhotoPath;
-      downloadedPhotoCount += 1;
+      try {
+        final localPhotoPath = await _mediaRepository.ensureDownloadedPhoto(
+          session: session,
+          objectPath: entry.photoObjectPath,
+        );
+        entries[index] = entry.copyWith(localPhotoPath: localPhotoPath);
+        mediaCacheIndex[entry.photoObjectPath] = localPhotoPath;
+        downloadedPhotoCount += 1;
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint(
+            '[sync] Failed to hydrate remote photo for entry ${entry.id}: $error',
+          );
+        }
+      }
     }
 
     return (

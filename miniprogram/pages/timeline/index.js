@@ -195,8 +195,8 @@ Page({
   openTask(event) {
     const { taskId } = event.currentTarget.dataset;
 
-    wx.navigateTo({
-      url: `/pages/tasks/index?focusTaskId=${taskId}`,
+    wx.redirectTo({
+      url: `/pages/record/index?focusTaskId=${taskId}`,
     });
   },
 
@@ -235,13 +235,13 @@ Page({
     });
   },
 
-  goTimeline() {},
-
-  goTasks() {
+  goPlan() {
     wx.redirectTo({
-      url: '/pages/tasks/index',
+      url: '/pages/plan/index',
     });
   },
+
+  goTimeline() {},
 
   goMe() {
     wx.redirectTo({

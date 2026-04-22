@@ -1,0 +1,59 @@
+<view class="app-shell">
+  <view wx:if="{{!detail}}" class="section-card empty-state">
+    <text class="empty-title">还没有生成这个作物计划</text>
+    <text class="empty-body">先回到计划首页设置播种日期，这里才会按阶段展开个人化时间轴。</text>
+  </view>
+
+  <view wx:elif="{{detail}}" class="section-card hero-card hero-strip">
+    <text class="hero-kicker">{{detail.regionName}}</text>
+    <text class="hero-title">{{detail.cropName}}计划</text>
+    <text class="helper-text">播种日期 {{detail.anchorDate}} · {{detail.progressLabel}}</text>
+  </view>
+
+  <block wx:for="{{detail.stages}}" wx:key="id">
+    <view class="section-card plan-stage-card plan-stage-card--{{item.status}}">
+      <view class="section-heading">
+        <view class="section-heading-main">
+          <text class="section-title">{{item.name}}</text>
+          <text class="helper-text">{{item.windowLabel}}</text>
+        </view>
+        <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+      </view>
+
+      <block wx:for="{{item.milestones}}" wx:key="id">
+        <view class="plan-milestone-card">
+          <view class="section-heading">
+            <view class="section-heading-main">
+              <text class="plan-milestone-title">{{item.name}}</text>
+              <text class="helper-text">{{item.goal}}</text>
+            </view>
+            <text class="plan-milestone-progress">{{item.progressLabel}}</text>
+          </view>
+
+          <block wx:for="{{item.actions}}" wx:key="id">
+            <view class="plan-action-row">
+              <view class="plan-action-main">
+                <text class="plan-action-title">{{item.name}}</text>
+                <text class="helper-text">{{item.executionStandard}}</text>
+                <view wx:if="{{item.hasRecentEntry}}" class="plan-recent-entry">
+                  <text class="plan-recent-entry-label">最近关联 Note</text>
+                  <text class="plan-recent-entry-text">{{item.recentEntryText}}</text>
+                </view>
+              </view>
+              <view class="plan-action-side">
+                <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+                <button
+                  class="action-button secondary-button small-button plan-action-button"
+                  data-action-id="{{item.id}}"
+                  bindtap="openActionDetail"
+                >
+                  查看动作
+                </button>
+              </view>
+            </view>
+          </block>
+        </view>
+      </block>
+    </view>
+  </block>
+</view>

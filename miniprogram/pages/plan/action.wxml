@@ -1,0 +1,70 @@
+<view class="app-shell">
+  <view wx:if="{{!detail}}" class="section-card empty-state">
+    <text class="empty-title">这个动作暂时没找到</text>
+    <text class="empty-body">可能是当前计划还没设置完成，或者动作模板已经更新。</text>
+  </view>
+
+  <view wx:elif="{{detail}}" class="section-card hero-card hero-strip">
+    <text class="hero-kicker">{{detail.cropLabel}}</text>
+    <text class="hero-title">{{detail.name}}</text>
+    <text class="helper-text">{{detail.stageName}} · {{detail.milestoneName}}</text>
+  </view>
+
+  <view wx:if="{{detail}}" class="section-card">
+    <view class="section-heading">
+      <view class="section-heading-main">
+        <text class="section-title">为什么做</text>
+        <text class="helper-text">{{detail.goal}}</text>
+      </view>
+      <text class="status-chip {{detail.status === 'completed' ? 'status-chip--success' : 'status-chip--warning'}}">{{detail.statusLabel}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{detail}}" class="section-card">
+    <text class="section-title">做到什么算合格</text>
+    <text class="helper-text">{{detail.executionStandard}}</text>
+  </view>
+
+  <view wx:if="{{detail}}" class="section-card">
+    <text class="section-title">怎么做</text>
+    <block wx:for="{{detail.steps}}" wx:key="index">
+      <view class="plan-detail-list-item">
+        <text class="plan-detail-list-index">{{index + 1}}</text>
+        <text class="plan-detail-list-text">{{item}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{detail}}" class="section-card">
+    <text class="section-title">注意什么</text>
+    <block wx:for="{{detail.cautions}}" wx:key="index">
+      <view class="plan-detail-list-item">
+        <text class="plan-detail-list-index">!</text>
+        <text class="plan-detail-list-text">{{item}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{detail.recentEntry}}" class="section-card success-card">
+    <text class="section-title">最近关联 Note</text>
+    <text class="helper-text">{{detail.recentEntry.createdAtLabel}}</text>
+    <text class="helper-text">{{detail.recentEntry.noteText}}</text>
+    <view class="action-row action-row--single">
+      <button class="action-button ghost-button small-button" bindtap="openRecentEntry">去时间线查看</button>
+    </view>
+  </view>
+
+  <view wx:if="{{detail}}" class="section-card">
+    <text class="section-title">下一步操作</text>
+    <text class="helper-text">建议提醒时间：{{detail.recommendedReminderDate}} {{detail.recommendedReminderTime}}</text>
+    <view class="action-row action-row--single">
+      <button class="action-button primary-button small-button" bindtap="toggleCompleted">
+        {{detail.status === 'completed' ? '取消完成' : '标记完成'}}
+      </button>
+    </view>
+    <view class="action-row action-row--pair">
+      <button class="action-button secondary-button small-button" bindtap="goWriteNote">记一条 Note</button>
+      <button class="action-button ghost-button small-button" bindtap="goWriteReminderNote">带提醒去记录</button>
+    </view>
+  </view>
+</view>

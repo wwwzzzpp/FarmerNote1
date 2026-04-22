@@ -51,9 +51,7 @@ class SettingsScreen extends StatelessWidget {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('退出登录'),
-            content: const Text(
-              '退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。',
-            ),
+            content: const Text('退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。'),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -79,7 +77,10 @@ class SettingsScreen extends StatelessWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        showAppSnackBar(context, error.toString().replaceFirst('Exception: ', ''));
+        showAppSnackBar(
+          context,
+          error.toString().replaceFirst('Exception: ', ''),
+        );
       }
     }
   }
@@ -189,10 +190,7 @@ class SettingsScreen extends StatelessWidget {
                 children: <Widget>[
                   const Text(
                     '官网与公开链接',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
                   const Text(
@@ -220,10 +218,7 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   const Text(
                     '公开支持方式',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   const Text(

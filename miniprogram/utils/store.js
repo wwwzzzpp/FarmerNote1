@@ -2,6 +2,7 @@ const cloudAuth = require('./cloud-auth');
 const cloudConfig = require('./cloud-config');
 const cloudMedia = require('./cloud-media');
 const cloudSync = require('./cloud-sync');
+const cropPlanUtils = require('./crop-plan');
 const dateUtils = require('./date');
 const STORAGE_KEY = 'farmernote_miniprogram_state_v1';
 
@@ -18,6 +19,8 @@ function getDefaultState() {
   return {
     entries: [],
     tasks: [],
+    cropPlanInstances: [],
+    cropPlanActionProgresses: [],
     pendingMutations: [],
     lastSyncedVersion: 0,
     authSession: null,
@@ -45,6 +48,16 @@ function detachCloudState(state) {
     })),
     tasks: sanitizeTasks(nextState.tasks).map((task) => ({
       ...task,
+      cloudTracked: false,
+    })),
+    cropPlanInstances: sanitizeCropPlanInstances(nextState.cropPlanInstances).map((plan) => ({
+      ...plan,
+      cloudTracked: false,
+    })),
+    cropPlanActionProgresses: sanitizeCropPlanActionProgresses(
+      nextState.cropPlanActionProgresses
+    ).map((progress) => ({
+      ...progress,
       cloudTracked: false,
     })),
     pendingMutations: [],
@@ -88,6 +101,14 @@ function sanitizeEntries(entries) {
       deletedAt: typeof entry.deletedAt === 'string' ? entry.deletedAt : null,
       sourcePlatform:
         typeof entry.sourcePlatform === 'string' ? entry.sourcePlatform : 'mini_program',
+      planInstanceId:
+        typeof entry.planInstanceId === 'string' && entry.planInstanceId.trim()
+          ? entry.planInstanceId.trim()
+          : '',
+      planActionId:
+        typeof entry.planActionId === 'string' && entry.planActionId.trim()
+          ? entry.planActionId.trim()
+          : '',
       syncVersion: Number(entry.syncVersion || 0),
       cloudTracked: entry.cloudTracked === true,
     }));
@@ -130,6 +151,91 @@ function sanitizeTasks(tasks) {
     }));
 }
 
+function sanitizeCropPlanInstances(planInstances) {
+  if (!Array.isArray(planInstances)) {
+    return [];
+  }
+
+  return planInstances
+    .filter(
+      (plan) =>
+        plan &&
+        typeof plan === 'object' &&
+        plan.id &&
+        plan.cropCode &&
+        plan.regionCode &&
+        plan.anchorDate
+    )
+    .map((plan) => ({
+      id: String(plan.id),
+      cropCode: String(plan.cropCode),
+      regionCode: String(plan.regionCode),
+      anchorDate: String(plan.anchorDate),
+      status: String(plan.status || 'active') === 'active' ? 'active' : 'active',
+      createdAt: typeof plan.createdAt === 'string' ? plan.createdAt : new Date().toISOString(),
+      updatedAt:
+        typeof plan.updatedAt === 'string'
+          ? plan.updatedAt
+          : typeof plan.createdAt === 'string'
+          ? plan.createdAt
+          : new Date().toISOString(),
+      clientUpdatedAt:
+        typeof plan.clientUpdatedAt === 'string'
+          ? plan.clientUpdatedAt
+          : typeof plan.updatedAt === 'string'
+          ? plan.updatedAt
+          : typeof plan.createdAt === 'string'
+          ? plan.createdAt
+          : new Date().toISOString(),
+      deletedAt: typeof plan.deletedAt === 'string' ? plan.deletedAt : null,
+      syncVersion: Number(plan.syncVersion || 0),
+      cloudTracked: plan.cloudTracked === true,
+    }));
+}
+
+function sanitizeCropPlanActionProgresses(progressRecords) {
+  if (!Array.isArray(progressRecords)) {
+    return [];
+  }
+
+  return progressRecords
+    .filter(
+      (progress) =>
+        progress &&
+        typeof progress === 'object' &&
+        progress.id &&
+        progress.planInstanceId &&
+        progress.actionId
+    )
+    .map((progress) => ({
+      id: String(progress.id),
+      planInstanceId: String(progress.planInstanceId),
+      actionId: String(progress.actionId),
+      status:
+        String(progress.status || 'pending') === 'completed' ? 'completed' : 'pending',
+      completedAt: typeof progress.completedAt === 'string' ? progress.completedAt : null,
+      createdAt:
+        typeof progress.createdAt === 'string' ? progress.createdAt : new Date().toISOString(),
+      updatedAt:
+        typeof progress.updatedAt === 'string'
+          ? progress.updatedAt
+          : typeof progress.createdAt === 'string'
+          ? progress.createdAt
+          : new Date().toISOString(),
+      clientUpdatedAt:
+        typeof progress.clientUpdatedAt === 'string'
+          ? progress.clientUpdatedAt
+          : typeof progress.updatedAt === 'string'
+          ? progress.updatedAt
+          : typeof progress.createdAt === 'string'
+          ? progress.createdAt
+          : new Date().toISOString(),
+      deletedAt: typeof progress.deletedAt === 'string' ? progress.deletedAt : null,
+      syncVersion: Number(progress.syncVersion || 0),
+      cloudTracked: progress.cloudTracked === true,
+    }));
+}
+
 function sanitizeMutations(mutations) {
   if (!Array.isArray(mutations)) {
     return [];
@@ -146,7 +252,14 @@ function sanitizeMutations(mutations) {
     )
     .map((mutation) => ({
       id: String(mutation.id),
-      entityType: mutation.entityType === 'task' ? 'task' : 'entry',
+      entityType:
+        mutation.entityType === 'task'
+          ? 'task'
+          : mutation.entityType === 'plan_instance'
+          ? 'plan_instance'
+          : mutation.entityType === 'plan_action_progress'
+          ? 'plan_action_progress'
+          : 'entry',
       operation: mutation.operation === 'delete' ? 'delete' : 'upsert',
       entityId: String(mutation.entityId),
       payload: mutation.payload && typeof mutation.payload === 'object' ? { ...mutation.payload } : {},
@@ -201,6 +314,8 @@ function sanitizeState(rawState) {
   return {
     entries: sanitizeEntries(rawState.entries),
     tasks: sanitizeTasks(rawState.tasks),
+    cropPlanInstances: sanitizeCropPlanInstances(rawState.cropPlanInstances),
+    cropPlanActionProgresses: sanitizeCropPlanActionProgresses(rawState.cropPlanActionProgresses),
     pendingMutations: sanitizeMutations(rawState.pendingMutations),
     lastSyncedVersion: Number(rawState.lastSyncedVersion || 0),
     authSession: sanitizeAuthSession(rawState.authSession),
@@ -272,6 +387,14 @@ function getActiveEntries(state) {
 
 function getActiveTasks(state) {
   return state.tasks.filter((task) => !task.deletedAt);
+}
+
+function getActiveCropPlanInstances(state) {
+  return state.cropPlanInstances.filter((plan) => !plan.deletedAt);
+}
+
+function getActiveCropPlanActionProgresses(state) {
+  return state.cropPlanActionProgresses.filter((progress) => !progress.deletedAt);
 }
 
 function buildTaskRecords(state) {
@@ -370,6 +493,203 @@ function getTaskSections() {
   };
 }
 
+function getCropPlanCards() {
+  const state = loadState();
+  const planInstances = getActiveCropPlanInstances(state);
+  const progressRecords = getActiveCropPlanActionProgresses(state);
+  const entries = getActiveEntries(state);
+
+  return cropPlanUtils.getCatalog().crops.map((cropTemplate) =>
+    cropPlanUtils.buildPlanCard({
+      cropTemplate,
+      planInstance: cropPlanUtils.getActivePlanInstance(planInstances, cropTemplate.cropCode),
+      progressRecords,
+      entries,
+      reference: new Date(),
+    })
+  );
+}
+
+function getCropPlanDetail(cropCode) {
+  const state = loadState();
+  const cropTemplate = cropPlanUtils.getCropTemplate(cropCode);
+  if (!cropTemplate) {
+    return null;
+  }
+
+  const planInstance = cropPlanUtils.getActivePlanInstance(
+    getActiveCropPlanInstances(state),
+    cropCode
+  );
+
+  return cropPlanUtils.buildPlanDetail({
+    cropTemplate,
+    planInstance,
+    progressRecords: getActiveCropPlanActionProgresses(state),
+    entries: getActiveEntries(state),
+    reference: new Date(),
+  });
+}
+
+function getCropPlanActionDetail(planInstanceId, actionId) {
+  const state = loadState();
+  const planInstance = getActiveCropPlanInstances(state).find((plan) => plan.id === planInstanceId);
+  if (!planInstance) {
+    return null;
+  }
+
+  const cropTemplate = cropPlanUtils.getCropTemplate(planInstance.cropCode);
+  if (!cropTemplate) {
+    return null;
+  }
+
+  return cropPlanUtils.buildActionDetail({
+    cropTemplate,
+    planInstance,
+    progressRecords: getActiveCropPlanActionProgresses(state),
+    entries: getActiveEntries(state),
+    actionId,
+    reference: new Date(),
+  });
+}
+
+function setCropPlanAnchor(cropCode, anchorDate) {
+  const state = loadState();
+  const cropTemplate = cropPlanUtils.getCropTemplate(cropCode);
+  if (!cropTemplate) {
+    throw new Error('暂不支持这个作物计划。');
+  }
+
+  const normalizedAnchorDate = dateUtils.formatDateInput(cropPlanUtils.parseAnchorDate(anchorDate));
+  const nowIso = new Date().toISOString();
+  const shouldTrackCloud = !!state.authSession && cloudConfig.isConfigured();
+  const existingPlan = cropPlanUtils.getActivePlanInstance(
+    getActiveCropPlanInstances(state),
+    cropCode
+  );
+
+  const nextPlan = existingPlan
+    ? {
+        ...existingPlan,
+        anchorDate: normalizedAnchorDate,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
+        cloudTracked: existingPlan.cloudTracked || shouldTrackCloud,
+      }
+    : {
+        id: dateUtils.createId('plan'),
+        cropCode: cropTemplate.cropCode,
+        regionCode: cropPlanUtils.getCatalog().regionCode,
+        anchorDate: normalizedAnchorDate,
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
+        deletedAt: null,
+        syncVersion: 0,
+        cloudTracked: shouldTrackCloud,
+      };
+
+  let pendingMutations = state.pendingMutations;
+  if (nextPlan.cloudTracked) {
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildPlanInstanceMutation(nextPlan, 'upsert')
+    );
+  }
+
+  persistState({
+    ...state,
+    cropPlanInstances: existingPlan
+      ? state.cropPlanInstances.map((plan) => (plan.id === nextPlan.id ? nextPlan : plan))
+      : [nextPlan, ...state.cropPlanInstances],
+    pendingMutations,
+  });
+
+  triggerBackgroundSync();
+  return nextPlan;
+}
+
+function toggleCropPlanActionProgress(planInstanceId, actionId) {
+  const state = loadState();
+  const planInstance = getActiveCropPlanInstances(state).find((plan) => plan.id === planInstanceId);
+  if (!planInstance) {
+    throw new Error('当前作物计划不存在。');
+  }
+
+  const nowIso = new Date().toISOString();
+  const shouldTrackCloud = !!state.authSession && cloudConfig.isConfigured();
+  const existingProgress = getActiveCropPlanActionProgresses(state).find(
+    (progress) => progress.planInstanceId === planInstanceId && progress.actionId === actionId
+  );
+
+  const nextProgress = existingProgress
+    ? {
+        ...existingProgress,
+        status: existingProgress.status === 'completed' ? 'pending' : 'completed',
+        completedAt: existingProgress.status === 'completed' ? null : nowIso,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
+        cloudTracked: existingProgress.cloudTracked || shouldTrackCloud,
+      }
+    : {
+        id: dateUtils.createId('plan_progress'),
+        planInstanceId,
+        actionId,
+        status: 'completed',
+        completedAt: nowIso,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso,
+        deletedAt: null,
+        syncVersion: 0,
+        cloudTracked: shouldTrackCloud,
+      };
+
+  let pendingMutations = state.pendingMutations;
+  if (nextProgress.cloudTracked) {
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildPlanActionProgressMutation(nextProgress, 'upsert')
+    );
+  }
+
+  persistState({
+    ...state,
+    cropPlanActionProgresses: existingProgress
+      ? state.cropPlanActionProgresses.map((progress) =>
+          progress.id === nextProgress.id ? nextProgress : progress
+        )
+      : [nextProgress, ...state.cropPlanActionProgresses],
+    pendingMutations,
+  });
+
+  triggerBackgroundSync();
+  return nextProgress;
+}
+
+function buildCropPlanRecordDraft(planInstanceId, actionId, withReminder) {
+  const state = loadState();
+  const planInstance = getActiveCropPlanInstances(state).find((plan) => plan.id === planInstanceId);
+  if (!planInstance) {
+    throw new Error('当前作物计划不存在。');
+  }
+
+  const cropTemplate = cropPlanUtils.getCropTemplate(planInstance.cropCode);
+  if (!cropTemplate) {
+    throw new Error('当前作物模板不存在。');
+  }
+
+  const actionContext = cropPlanUtils
+    .buildActionContexts(cropTemplate)
+    .find((item) => item.action.id === actionId);
+  if (!actionContext) {
+    throw new Error('当前动作不存在。');
+  }
+
+  return cropPlanUtils.buildNoteDraft(planInstance, actionContext, withReminder, new Date());
+}
+
 function toCloudEntry(entry) {
   return {
     id: entry.id,
@@ -380,6 +700,8 @@ function toCloudEntry(entry) {
     clientUpdatedAt: entry.clientUpdatedAt,
     deletedAt: entry.deletedAt || null,
     sourcePlatform: entry.sourcePlatform || 'mini_program',
+    planInstanceId: entry.planInstanceId || null,
+    planActionId: entry.planActionId || null,
   };
 }
 
@@ -394,6 +716,34 @@ function toCloudTask(task) {
     updatedAt: task.updatedAt,
     clientUpdatedAt: task.clientUpdatedAt,
     deletedAt: task.deletedAt || null,
+  };
+}
+
+function toCloudPlanInstance(plan) {
+  return {
+    id: plan.id,
+    cropCode: plan.cropCode,
+    regionCode: plan.regionCode,
+    anchorDate: plan.anchorDate,
+    status: plan.status,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+    clientUpdatedAt: plan.clientUpdatedAt,
+    deletedAt: plan.deletedAt || null,
+  };
+}
+
+function toCloudPlanActionProgress(progress) {
+  return {
+    id: progress.id,
+    planInstanceId: progress.planInstanceId,
+    actionId: progress.actionId,
+    status: progress.status,
+    completedAt: progress.completedAt || null,
+    createdAt: progress.createdAt,
+    updatedAt: progress.updatedAt,
+    clientUpdatedAt: progress.clientUpdatedAt,
+    deletedAt: progress.deletedAt || null,
   };
 }
 
@@ -431,6 +781,28 @@ function buildTaskMutation(task, operation) {
   };
 }
 
+function buildPlanInstanceMutation(plan, operation) {
+  return {
+    id: dateUtils.createId('mutation'),
+    entityType: 'plan_instance',
+    operation,
+    entityId: plan.id,
+    payload: toCloudPlanInstance(plan),
+    clientUpdatedAt: plan.clientUpdatedAt,
+  };
+}
+
+function buildPlanActionProgressMutation(progress, operation) {
+  return {
+    id: dateUtils.createId('mutation'),
+    entityType: 'plan_action_progress',
+    operation,
+    entityId: progress.id,
+    payload: toCloudPlanActionProgress(progress),
+    clientUpdatedAt: progress.clientUpdatedAt,
+  };
+}
+
 function triggerBackgroundSync() {
   if (!cloudConfig.isConfigured()) {
     return;
@@ -464,6 +836,8 @@ function createEntry(input) {
     clientUpdatedAt: nowIso,
     deletedAt: null,
     sourcePlatform: 'mini_program',
+    planInstanceId: String(input.planInstanceId || ''),
+    planActionId: String(input.planActionId || ''),
     syncVersion: 0,
     cloudTracked: shouldTrackCloud,
   };
@@ -499,6 +873,8 @@ function createEntry(input) {
     ...state,
     entries: [entry, ...state.entries],
     tasks: task ? [...state.tasks, task] : state.tasks,
+    cropPlanInstances: state.cropPlanInstances,
+    cropPlanActionProgresses: state.cropPlanActionProgresses,
     pendingMutations,
   });
 
@@ -1027,11 +1403,15 @@ async function requestAccountDeletionWithWeChat() {
 
 module.exports = {
   STORAGE_KEY,
+  buildCropPlanRecordDraft,
   completeTask,
   createEntry,
   deleteEntry,
   deleteTask,
   getAccountProfileSummary,
+  getCropPlanActionDetail,
+  getCropPlanCards,
+  getCropPlanDetail,
   getCloudStatus,
   getStats,
   getTaskSections,
@@ -1047,8 +1427,10 @@ module.exports = {
   requestAccountDeletionWithWeChat,
   sendAccountDeletionPhoneCode,
   sendPhoneCodeToCloud,
+  setCropPlanAnchor,
   signOutFromCloud,
   signInToCloud,
   signInToCloudWithPhone,
   syncNow,
+  toggleCropPlanActionProgress,
 };

@@ -9,6 +9,8 @@ class EntryRecord {
     required this.clientUpdatedAt,
     required this.deletedAt,
     required this.sourcePlatform,
+    required this.planInstanceId,
+    required this.planActionId,
     required this.syncVersion,
     required this.cloudTracked,
   });
@@ -22,6 +24,8 @@ class EntryRecord {
   final String clientUpdatedAt;
   final String? deletedAt;
   final String sourcePlatform;
+  final String planInstanceId;
+  final String planActionId;
   final int syncVersion;
   final bool cloudTracked;
 
@@ -55,6 +59,8 @@ class EntryRecord {
           ? json['deletedAt'] as String
           : null,
       sourcePlatform: (json['sourcePlatform'] ?? 'flutter_app').toString(),
+      planInstanceId: (json['planInstanceId'] ?? '').toString(),
+      planActionId: (json['planActionId'] ?? '').toString(),
       syncVersion: json['syncVersion'] is int
           ? json['syncVersion'] as int
           : int.tryParse((json['syncVersion'] ?? '').toString()) ?? 0,
@@ -72,6 +78,8 @@ class EntryRecord {
     'clientUpdatedAt': clientUpdatedAt,
     'deletedAt': deletedAt,
     'sourcePlatform': sourcePlatform,
+    'planInstanceId': planInstanceId,
+    'planActionId': planActionId,
     'syncVersion': syncVersion,
     'cloudTracked': cloudTracked,
   };
@@ -85,6 +93,8 @@ class EntryRecord {
     'clientUpdatedAt': clientUpdatedAt,
     'deletedAt': deletedAt,
     'sourcePlatform': sourcePlatform,
+    'planInstanceId': planInstanceId.isEmpty ? null : planInstanceId,
+    'planActionId': planActionId.isEmpty ? null : planActionId,
   };
 
   EntryRecord copyWith({
@@ -97,6 +107,8 @@ class EntryRecord {
     String? clientUpdatedAt,
     String? deletedAt,
     String? sourcePlatform,
+    String? planInstanceId,
+    String? planActionId,
     int? syncVersion,
     bool? cloudTracked,
     bool clearDeletedAt = false,
@@ -111,6 +123,8 @@ class EntryRecord {
       clientUpdatedAt: clientUpdatedAt ?? this.clientUpdatedAt,
       deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
       sourcePlatform: sourcePlatform ?? this.sourcePlatform,
+      planInstanceId: planInstanceId ?? this.planInstanceId,
+      planActionId: planActionId ?? this.planActionId,
       syncVersion: syncVersion ?? this.syncVersion,
       cloudTracked: cloudTracked ?? this.cloudTracked,
     );

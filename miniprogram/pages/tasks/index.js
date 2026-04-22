@@ -1,37 +1,7 @@
-const dateUtils = require('../../utils/date');
 const mediaUtils = require('../../utils/media');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
-
-function buildTaskViewModel(task, focusTaskId) {
-  let statusLabel = '待处理';
-  let statusClass = 'status-chip--warning';
-
-  if (task.status === 'overdue') {
-    statusLabel = '已逾期';
-    statusClass = 'status-chip--danger';
-  } else if (task.status === 'completed') {
-    statusLabel = '已完成';
-    statusClass = 'status-chip--success';
-  }
-
-  return {
-    id: task.id,
-    noteText: task.noteText,
-    photoPath: task.photoPath || '',
-    hasPhoto: !!task.photoPath,
-    dueLabel: dateUtils.formatRelativeReminder(task.dueAt),
-    dueCompactLabel: dateUtils.formatCompactDateTime(task.dueAt),
-    focusClass: task.id === focusTaskId ? 'task-card--focused' : '',
-    statusLabel,
-    statusClass,
-    canComplete: task.status !== 'completed',
-    completedCompactLabel:
-      task.status === 'completed' && task.completedAt
-        ? dateUtils.formatCompactDateTime(task.completedAt)
-        : '',
-  };
-}
+const taskModuleUtils = require('../../utils/task-module');
 
 Page({
   data: {
@@ -70,23 +40,9 @@ Page({
   },
 
   getLocalViewState() {
-    const sections = store.getTaskSections();
-    const upcomingTasks = sections.upcomingTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
-    const overdueTasks = sections.overdueTasks.map((task) => buildTaskViewModel(task, this.data.focusTaskId));
-    const completedTasks = sections.completedTasks.map((task) =>
-      buildTaskViewModel(task, this.data.focusTaskId)
-    );
-    const hasTasks = upcomingTasks.length + overdueTasks.length + completedTasks.length > 0;
-
-    return {
-      upcomingTasks,
-      overdueTasks,
-      completedTasks,
-      hasTasks,
-      hasUpcomingTasks: upcomingTasks.length > 0,
-      hasOverdueTasks: overdueTasks.length > 0,
-      hasCompletedTasks: completedTasks.length > 0,
-    };
+    return taskModuleUtils.buildTaskModuleViewState(store.getTaskSections(), {
+      focusTaskId: this.data.focusTaskId,
+    });
   },
 
   async refreshPage() {
@@ -155,6 +111,12 @@ Page({
   goRecord() {
     wx.redirectTo({
       url: '/pages/record/index',
+    });
+  },
+
+  goPlan() {
+    wx.redirectTo({
+      url: '/pages/plan/index',
     });
   },
 

@@ -87,6 +87,8 @@ StoredAppState _buildStoredState({
   return StoredAppState(
     entries: entries,
     tasks: const [],
+    cropPlanInstances: const [],
+    cropPlanActionProgresses: const [],
     pendingMutations: const [],
     lastSyncedVersion: 0,
     authSession: _buildAuthSession(),
@@ -134,6 +136,8 @@ EntryRecord _buildEntry({
     clientUpdatedAt: createdAt,
     deletedAt: null,
     sourcePlatform: 'flutter_app',
+    planInstanceId: '',
+    planActionId: '',
     syncVersion: 0,
     cloudTracked: true,
   );

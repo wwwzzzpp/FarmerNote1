@@ -60,7 +60,7 @@
                   data-task-id="{{entry.taskId}}"
                   bindtap="openTask"
                 >
-                  打开待办
+                  去记录页处理
                 </button>
                 <button
                   class="action-button danger-button small-button"
@@ -80,8 +80,8 @@
 
   <view class="nav-bar">
     <button class="nav-item" bindtap="goRecord">记录</button>
+    <button class="nav-item" bindtap="goPlan">计划</button>
     <button class="nav-item nav-item--active" bindtap="goTimeline">时间线</button>
-    <button class="nav-item" bindtap="goTasks">待办</button>
     <button class="nav-item" bindtap="goMe">我</button>
   </view>
 </view>

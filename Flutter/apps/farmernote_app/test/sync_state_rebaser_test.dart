@@ -18,6 +18,8 @@ void main() {
       clientUpdatedAt: '2026-04-20T08:00:00.000Z',
       deletedAt: null,
       sourcePlatform: 'flutter_app',
+      planInstanceId: '',
+      planActionId: '',
       syncVersion: 7,
       cloudTracked: true,
     );
@@ -31,6 +33,8 @@ void main() {
       clientUpdatedAt: '2026-04-20T08:05:00.000Z',
       deletedAt: null,
       sourcePlatform: 'flutter_app',
+      planInstanceId: '',
+      planActionId: '',
       syncVersion: 0,
       cloudTracked: true,
     );
@@ -38,6 +42,8 @@ void main() {
     final latestState = StoredAppState(
       entries: const <EntryRecord>[acknowledgedEntry, newLocalEntry],
       tasks: const <TaskRecord>[],
+      cropPlanInstances: const [],
+      cropPlanActionProgresses: const [],
       pendingMutations: <SyncMutation>[
         _mutation(id: 'mutation-old', entityId: 'entry-old'),
         _mutation(id: 'mutation-new', entityId: 'entry-new'),
@@ -50,6 +56,8 @@ void main() {
     final syncedState = StoredAppState(
       entries: const <EntryRecord>[acknowledgedEntry],
       tasks: const <TaskRecord>[],
+      cropPlanInstances: const [],
+      cropPlanActionProgresses: const [],
       pendingMutations: const <SyncMutation>[],
       lastSyncedVersion: 9,
       authSession: null,
@@ -81,6 +89,8 @@ void main() {
       clientUpdatedAt: '2026-04-20T08:06:00.000Z',
       deletedAt: null,
       sourcePlatform: 'flutter_app',
+      planInstanceId: '',
+      planActionId: '',
       syncVersion: 3,
       cloudTracked: true,
     );
@@ -94,6 +104,8 @@ void main() {
       clientUpdatedAt: '2026-04-20T08:04:00.000Z',
       deletedAt: null,
       sourcePlatform: 'flutter_app',
+      planInstanceId: '',
+      planActionId: '',
       syncVersion: 8,
       cloudTracked: true,
     );
@@ -102,6 +114,8 @@ void main() {
       latestState: StoredAppState(
         entries: const <EntryRecord>[latestEntry],
         tasks: const <TaskRecord>[],
+        cropPlanInstances: const [],
+        cropPlanActionProgresses: const [],
         pendingMutations: <SyncMutation>[
           _mutation(id: 'mutation-edit', entityId: 'entry-1'),
         ],
@@ -112,6 +126,8 @@ void main() {
       syncedState: StoredAppState(
         entries: const <EntryRecord>[syncedEntry],
         tasks: const <TaskRecord>[],
+        cropPlanInstances: const [],
+        cropPlanActionProgresses: const [],
         pendingMutations: const <SyncMutation>[],
         lastSyncedVersion: 8,
         authSession: null,
@@ -130,10 +146,7 @@ void main() {
   });
 }
 
-SyncMutation _mutation({
-  required String id,
-  required String entityId,
-}) {
+SyncMutation _mutation({required String id, required String entityId}) {
   return SyncMutation(
     id: id,
     entityType: SyncEntityType.entry,

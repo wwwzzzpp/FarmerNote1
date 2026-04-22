@@ -1,0 +1,27 @@
+.plan-detail-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.plan-detail-list-index {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 999rpx;
+  background: #eae1cb;
+  color: #554f3d;
+  font-size: 24rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.plan-detail-list-text {
+  flex: 1;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #4b4535;
+}

@@ -2,11 +2,13 @@
   "pages": [
     "pages/launch/index",
     "pages/record/index",
+    "pages/plan/index",
+    "pages/plan/detail",
+    "pages/plan/action",
     "pages/settings/index",
     "pages/legal/index",
     "pages/account-deletion/index",
-    "pages/timeline/index",
-    "pages/tasks/index"
+    "pages/timeline/index"
   ],
   "window": {
     "navigationBarTitleText": "巡田记",

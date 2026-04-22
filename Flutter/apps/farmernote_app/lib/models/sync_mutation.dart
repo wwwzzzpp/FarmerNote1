@@ -1,6 +1,8 @@
 enum SyncEntityType {
   entry('entry'),
-  task('task');
+  task('task'),
+  planInstance('plan_instance'),
+  planActionProgress('plan_action_progress');
 
   const SyncEntityType(this.value);
 

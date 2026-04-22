@@ -4,6 +4,8 @@ const mediaUtils = require('../../utils/media');
 const reminderIntent = require('../../utils/reminder-intent');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
+const taskModuleUtils = require('../../utils/task-module');
+const TASK_MODULE_PAGE_SIZE = 10;
 
 function buildReminderPreview(dateValue, timeValue) {
   const dueAt = dateUtils.combineDateAndTime(dateValue, timeValue);
@@ -18,10 +20,16 @@ function buildReminderPreview(dateValue, timeValue) {
   };
 }
 
-function getLocalRecordViewState() {
+function getLocalRecordViewState(options) {
+  const settings = options || {};
   return {
     stats: store.getStats(),
     cloudStatus: store.getCloudStatus(),
+    taskModule: taskModuleUtils.buildTaskModuleViewState(store.getTaskSections(), {
+      page: settings.taskModulePage,
+      pageSize: TASK_MODULE_PAGE_SIZE,
+      focusTaskId: settings.focusTaskId,
+    }),
   };
 }
 
@@ -51,6 +59,7 @@ function getEmptyRecordViewState() {
       hasPhone: false,
       hasWeChat: false,
     },
+    taskModule: taskModuleUtils.getEmptyTaskModuleViewState(),
   };
 }
 
@@ -60,6 +69,9 @@ Page({
     reminderEnabled: false,
     reminderDate: '',
     reminderTime: '',
+    draftPlanInstanceId: '',
+    draftPlanActionId: '',
+    draftSourceLabel: '',
     smartReminderVisible: false,
     smartReminderTag: '',
     smartReminderToneClass: 'status-chip--neutral',
@@ -76,10 +88,13 @@ Page({
     phoneCode: '',
     phoneCodeCountdown: 0,
     phoneActionBusy: false,
+    hasResolvedTaskModuleLoad: false,
+    taskModulePage: 1,
+    taskModuleFocusTaskId: '',
     ...getEmptyRecordViewState(),
   },
 
-  onLoad() {
+  onLoad(options) {
     this.noteAnalysisTimer = null;
     this.phoneCodeTimer = null;
     this.lastAcceptedNoteText = '';
@@ -87,7 +102,12 @@ Page({
     if (!startupConsent.ensureAcceptedOrLaunch()) {
       return;
     }
+    this.setData({
+      taskModuleFocusTaskId: options && options.focusTaskId ? String(options.focusTaskId) : '',
+      taskModulePage: 1,
+    });
     this.ensureReminderDraft();
+    this.applyIncomingDraft(options || {});
     void this.refreshPage();
   },
 
@@ -119,6 +139,18 @@ Page({
     wx.stopPullDownRefresh();
   },
 
+  onReachBottom() {
+    if (!startupConsent.ensureAcceptedOrLaunch()) {
+      return;
+    }
+
+    if (!this.data.taskModule || !this.data.taskModule.hasMore) {
+      return;
+    }
+
+    void this.loadMoreTaskModule();
+  },
+
   ensureReminderDraft() {
     if (this.data.reminderDate && this.data.reminderTime) {
       return;
@@ -131,9 +163,69 @@ Page({
     });
   },
 
+  applyIncomingDraft(options) {
+    const noteText = options.noteText ? decodeURIComponent(options.noteText) : '';
+    const reminderEnabled =
+      options.reminderEnabled === '1' || options.reminderEnabled === 'true';
+    const reminderDate = options.reminderDate ? String(options.reminderDate) : this.data.reminderDate;
+    const reminderTime = options.reminderTime ? String(options.reminderTime) : this.data.reminderTime;
+    const draftSourceLabel = options.sourceLabel ? decodeURIComponent(options.sourceLabel) : '';
+
+    if (!noteText && !options.planInstanceId && !options.planActionId) {
+      return;
+    }
+
+    this.lastAcceptedNoteText = noteText;
+    this.setData(
+      {
+        noteText,
+        reminderEnabled,
+        reminderDate,
+        reminderTime,
+        draftPlanInstanceId: options.planInstanceId ? String(options.planInstanceId) : '',
+        draftPlanActionId: options.planActionId ? String(options.planActionId) : '',
+        draftSourceLabel,
+        smartReminderVisible: false,
+        smartReminderTag: '',
+        smartReminderToneClass: 'status-chip--neutral',
+        smartReminderMessage: '',
+        smartReminderMatchedText: '',
+        manualReminderEdited: reminderEnabled,
+        autoReminderApplied: false,
+      },
+      () => {
+        this.updatePreview();
+      }
+    );
+  },
+
   async refreshPage(options) {
     const settings = options || {};
-    this.setData(getLocalRecordViewState());
+    const nextTaskModuleFocusTaskId =
+      settings.focusTaskId !== undefined
+        ? String(settings.focusTaskId || '')
+        : String(this.data.taskModuleFocusTaskId || '');
+    const nextTaskModulePage = Number(
+      settings.taskModulePage || this.data.taskModulePage || 1
+    );
+    const localViewState = getLocalRecordViewState({
+      taskModulePage: nextTaskModulePage,
+      focusTaskId: nextTaskModuleFocusTaskId,
+    });
+    const shouldShowTaskModuleInitialLoading =
+      !this.data.hasResolvedTaskModuleLoad &&
+      !localViewState.taskModule.hasTasks &&
+      store.isSignedInToCloud();
+
+    this.setData({
+      ...localViewState,
+      taskModule: {
+        ...localViewState.taskModule,
+        isInitialLoading: shouldShowTaskModuleInitialLoading,
+      },
+      taskModulePage: localViewState.taskModule.page,
+      taskModuleFocusTaskId: nextTaskModuleFocusTaskId,
+    });
 
     if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
@@ -143,8 +235,33 @@ Page({
       }
     }
 
-    this.setData(getLocalRecordViewState());
+    const refreshedViewState = getLocalRecordViewState({
+      taskModulePage: nextTaskModulePage,
+      focusTaskId: nextTaskModuleFocusTaskId,
+    });
+    this.setData({
+      ...refreshedViewState,
+      taskModule: {
+        ...refreshedViewState.taskModule,
+        isInitialLoading: false,
+      },
+      hasResolvedTaskModuleLoad: true,
+      taskModulePage: refreshedViewState.taskModule.page,
+      taskModuleFocusTaskId: nextTaskModuleFocusTaskId,
+    });
     this.updatePreview();
+  },
+
+  async loadMoreTaskModule() {
+    if (!this.data.taskModule || !this.data.taskModule.hasMore) {
+      return;
+    }
+
+    await this.refreshPage({
+      sync: false,
+      taskModulePage: Number(this.data.taskModule.page || this.data.taskModulePage || 1) + 1,
+      focusTaskId: this.data.taskModuleFocusTaskId,
+    });
   },
 
   startPhoneCodeCountdown() {
@@ -504,6 +621,8 @@ Page({
         noteText,
         dueAt,
         photoPath: savedPhotoPath,
+        planInstanceId: this.data.draftPlanInstanceId,
+        planActionId: this.data.draftPlanActionId,
       });
 
       const suggestion = dateUtils.getSuggestedReminderParts();
@@ -544,8 +663,16 @@ Page({
         previewHint: '',
         feedbackMessage,
         photoTempPath: '',
+        draftPlanInstanceId: '',
+        draftPlanActionId: '',
+        draftSourceLabel: '',
         stats: store.getStats(),
         cloudStatus: store.getCloudStatus(),
+        taskModule: taskModuleUtils.buildTaskModuleViewState(store.getTaskSections(), {
+          page: this.data.taskModulePage,
+          pageSize: TASK_MODULE_PAGE_SIZE,
+          focusTaskId: this.data.taskModuleFocusTaskId,
+        }),
       });
 
       wx.showToast({
@@ -774,7 +901,54 @@ Page({
     }
   },
 
-  goRecord() {},
+  previewTaskPhoto(event) {
+    const { photoPath } = event.currentTarget.dataset;
+    mediaUtils.previewPhoto(photoPath);
+  },
+
+  async handleTaskComplete(event) {
+    const { taskId } = event.currentTarget.dataset;
+
+    store.completeTask(taskId);
+    await this.refreshPage();
+    wx.showToast({
+      title: '已完成',
+      icon: 'success',
+    });
+  },
+
+  handleTaskDelete(event) {
+    const { taskId } = event.currentTarget.dataset;
+
+    wx.showModal({
+      title: '删除待办',
+      content: '删除后，这条任务会被移除，但原记录仍会保留在时间线里。',
+      success: async ({ confirm }) => {
+        if (!confirm) {
+          return;
+        }
+
+        store.deleteTask(taskId);
+        await this.refreshPage();
+        wx.showToast({
+          title: '已删除',
+          icon: 'success',
+        });
+      },
+    });
+  },
+
+  goRecord() {
+    this.setData({
+      taskModuleFocusTaskId: '',
+    });
+  },
+
+  goPlan() {
+    wx.redirectTo({
+      url: '/pages/plan/index',
+    });
+  },
 
   goSettings() {
     wx.navigateTo({
@@ -785,12 +959,6 @@ Page({
   goTimeline() {
     wx.redirectTo({
       url: '/pages/timeline/index',
-    });
-  },
-
-  goTasks() {
-    wx.redirectTo({
-      url: '/pages/tasks/index',
     });
   },
 

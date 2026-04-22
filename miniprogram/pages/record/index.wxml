@@ -20,6 +20,12 @@
     </view>
   </view>
 
+  <view wx:if="{{draftSourceLabel}}" class="section-card muted-card">
+    <text class="preview-label">当前来自作物计划</text>
+    <text class="preview-time">{{draftSourceLabel}}</text>
+    <text class="helper-text">保存后，这条记录会和对应的小动作关联起来，后面可以在计划详情里回看。</text>
+  </view>
+
   <view wx:if="{{!cloudStatus.isSignedIn}}" class="section-card">
     <text class="section-title">{{cloudStatus.headline}}</text>
     <text class="helper-text">{{cloudStatus.detail}}</text>
@@ -163,20 +169,172 @@
     <text class="helper-text">{{feedbackMessage}}</text>
   </view>
 
+  <view class="section-card">
+    <view class="section-heading">
+      <view class="section-heading-main">
+        <text class="section-title">待办模块</text>
+        <text class="helper-text">你设置过时间的记录，会汇总到这里，写完记录后可以顺手继续处理。</text>
+        <text wx:if="{{taskModule.hasTasks}}" class="helper-text">已显示 {{taskModule.visibleCount}} / {{taskModule.totalCount}} 条</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{taskModule.isInitialLoading}}" class="section-card loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-title">正在加载待办…</text>
+    <text class="loading-body">先把本机和云端提醒对齐，请稍等。</text>
+  </view>
+
+  <view wx:elif="{{!taskModule.hasTasks}}" class="section-card empty-state">
+    <text class="empty-title">还没有定时任务</text>
+    <text class="empty-body">在上面的记录框里打开提醒时间，这里就会自动接住。</text>
+  </view>
+
+  <view wx:if="{{taskModule.hasUpcomingTasks}}">
+    <text class="section-block-title">即将到来</text>
+    <text class="section-block-caption">未来的巡田动作</text>
+
+    <block wx:for="{{taskModule.upcomingTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <image
+          wx:if="{{item.hasPhoto}}"
+          class="task-photo-thumb"
+          src="{{item.photoPath}}"
+          mode="aspectFill"
+          data-photo-path="{{item.photoPath}}"
+          bindtap="previewTaskPhoto"
+        />
+        <view class="action-row action-row--pair task-action-grid">
+          <button
+            wx:if="{{item.canComplete}}"
+            class="action-button primary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="handleTaskComplete"
+          >
+            完成
+          </button>
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="handleTaskDelete"
+          >
+            删除任务
+          </button>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{taskModule.hasOverdueTasks}}">
+    <text class="section-block-title">已逾期</text>
+    <text class="section-block-caption">时间到了但还没处理</text>
+
+    <block wx:for="{{taskModule.overdueTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <image
+          wx:if="{{item.hasPhoto}}"
+          class="task-photo-thumb"
+          src="{{item.photoPath}}"
+          mode="aspectFill"
+          data-photo-path="{{item.photoPath}}"
+          bindtap="previewTaskPhoto"
+        />
+        <view class="action-row action-row--pair task-action-grid">
+          <button
+            wx:if="{{item.canComplete}}"
+            class="action-button primary-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="handleTaskComplete"
+          >
+            完成
+          </button>
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="handleTaskDelete"
+          >
+            删除任务
+          </button>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{taskModule.hasCompletedTasks}}">
+    <text class="section-block-title">已完成</text>
+    <text class="section-block-caption">已经处理完的提醒</text>
+
+    <block wx:for="{{taskModule.completedTasks}}" wx:key="id">
+      <view class="section-card task-card {{item.focusClass}}">
+        <view class="section-heading">
+          <view class="section-heading-main">
+            <text class="section-title task-due">{{item.dueLabel}}</text>
+          </view>
+          <text class="status-chip {{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+
+        <text class="task-note">{{item.noteText}}</text>
+        <image
+          wx:if="{{item.hasPhoto}}"
+          class="task-photo-thumb"
+          src="{{item.photoPath}}"
+          mode="aspectFill"
+          data-photo-path="{{item.photoPath}}"
+          bindtap="previewTaskPhoto"
+        />
+        <view class="action-row action-row--pair">
+          <button
+            class="action-button danger-button small-button"
+            data-task-id="{{item.id}}"
+            bindtap="handleTaskDelete"
+          >
+            删除任务
+          </button>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{taskModule.hasMore}}" class="section-card muted-card">
+    <text class="preview-label">待办还没看完</text>
+    <text class="helper-text">继续上滑会自动加载更多，你也可以点下面按钮继续展开。</text>
+    <view class="action-row action-row--single">
+      <button class="action-button ghost-button small-button" bindtap="loadMoreTaskModule">
+        {{taskModule.loadMoreLabel || '加载更多'}}
+      </button>
+    </view>
+  </view>
+
   <!-- <view class="section-card info-card">
     <text class="section-title">下一步</text>
-    <text class="helper-text">时间线会展示所有历史记录，待办页则会把挂了时间的记录自动分成即将到来、已逾期和已完成。</text>
+    <text class="helper-text">时间线会展示所有历史记录，记录页底部的待办模块会把挂了时间的记录自动分成即将到来、已逾期和已完成。</text>
 
     <view class="action-row action-row--pair">
       <button class="action-button secondary-button small-button" bindtap="goTimeline">查看时间线</button>
-      <button class="action-button ghost-button small-button" bindtap="goTasks">打开待办</button>
+      <button class="action-button ghost-button small-button" bindtap="goRecord">回到记录</button>
     </view>
   </view> -->
 
   <view class="nav-bar">
     <button class="nav-item nav-item--active" bindtap="goRecord">记录</button>
+    <button class="nav-item" bindtap="goPlan">计划</button>
     <button class="nav-item" bindtap="goTimeline">时间线</button>
-    <button class="nav-item" bindtap="goTasks">待办</button>
     <button class="nav-item" bindtap="goMe">我</button>
   </view>
 </view>

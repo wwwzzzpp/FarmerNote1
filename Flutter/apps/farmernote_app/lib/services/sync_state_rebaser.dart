@@ -1,3 +1,5 @@
+import '../models/crop_plan_action_progress.dart';
+import '../models/crop_plan_instance.dart';
 import '../models/entry_record.dart';
 import '../models/stored_app_state.dart';
 import '../models/task_record.dart';
@@ -15,7 +17,10 @@ class SyncStateRebaser {
         .where((mutation) => !processedIdSet.contains(mutation.id))
         .toList();
     final pendingEntityKeys = remainingMutations
-        .map((mutation) => _entityKey(mutation.entityType.value, mutation.entityId))
+        .map(
+          (mutation) =>
+              _entityKey(mutation.entityType.value, mutation.entityId),
+        )
         .toSet();
 
     final entriesById = <String, EntryRecord>{
@@ -42,9 +47,36 @@ class SyncStateRebaser {
       );
     }
 
+    final planInstancesById = <String, CropPlanInstance>{
+      for (final plan in syncedState.cropPlanInstances) plan.id: plan,
+    };
+    for (final plan in latestState.cropPlanInstances) {
+      final pendingEntityKey = _entityKey('plan_instance', plan.id);
+      planInstancesById[plan.id] = _mergePlanInstance(
+        latestPlan: plan,
+        syncedPlan: planInstancesById[plan.id],
+        hasPendingMutation: pendingEntityKeys.contains(pendingEntityKey),
+      );
+    }
+
+    final planActionProgressesById = <String, CropPlanActionProgress>{
+      for (final progress in syncedState.cropPlanActionProgresses)
+        progress.id: progress,
+    };
+    for (final progress in latestState.cropPlanActionProgresses) {
+      final pendingEntityKey = _entityKey('plan_action_progress', progress.id);
+      planActionProgressesById[progress.id] = _mergePlanActionProgress(
+        latestProgress: progress,
+        syncedProgress: planActionProgressesById[progress.id],
+        hasPendingMutation: pendingEntityKeys.contains(pendingEntityKey),
+      );
+    }
+
     return StoredAppState(
       entries: entriesById.values.toList(),
       tasks: tasksById.values.toList(),
+      cropPlanInstances: planInstancesById.values.toList(),
+      cropPlanActionProgresses: planActionProgressesById.values.toList(),
       pendingMutations: remainingMutations,
       lastSyncedVersion: _maxInt(
         latestState.lastSyncedVersion,
@@ -141,6 +173,87 @@ class SyncStateRebaser {
     return preferredTask.copyWith(
       syncVersion: _maxInt(latestTask.syncVersion, syncedTask.syncVersion),
       cloudTracked: latestTask.cloudTracked || syncedTask.cloudTracked,
+    );
+  }
+
+  static CropPlanInstance _mergePlanInstance({
+    required CropPlanInstance latestPlan,
+    required CropPlanInstance? syncedPlan,
+    required bool hasPendingMutation,
+  }) {
+    if (syncedPlan == null) {
+      return latestPlan;
+    }
+
+    if (hasPendingMutation) {
+      return syncedPlan.copyWith(
+        cropCode: latestPlan.cropCode,
+        regionCode: latestPlan.regionCode,
+        anchorDate: latestPlan.anchorDate,
+        status: latestPlan.status,
+        createdAt: latestPlan.createdAt,
+        updatedAt: latestPlan.updatedAt,
+        clientUpdatedAt: latestPlan.clientUpdatedAt,
+        deletedAt: latestPlan.deletedAt,
+        clearDeletedAt:
+            latestPlan.deletedAt == null || latestPlan.deletedAt!.isEmpty,
+        syncVersion: _maxInt(latestPlan.syncVersion, syncedPlan.syncVersion),
+        cloudTracked: latestPlan.cloudTracked || syncedPlan.cloudTracked,
+      );
+    }
+
+    final preferredPlan = _preferSyncedRecord(latestPlan, syncedPlan)
+        ? syncedPlan
+        : latestPlan;
+    return preferredPlan.copyWith(
+      syncVersion: _maxInt(latestPlan.syncVersion, syncedPlan.syncVersion),
+      cloudTracked: latestPlan.cloudTracked || syncedPlan.cloudTracked,
+    );
+  }
+
+  static CropPlanActionProgress _mergePlanActionProgress({
+    required CropPlanActionProgress latestProgress,
+    required CropPlanActionProgress? syncedProgress,
+    required bool hasPendingMutation,
+  }) {
+    if (syncedProgress == null) {
+      return latestProgress;
+    }
+
+    if (hasPendingMutation) {
+      return syncedProgress.copyWith(
+        planInstanceId: latestProgress.planInstanceId,
+        actionId: latestProgress.actionId,
+        status: latestProgress.status,
+        completedAt: latestProgress.completedAt,
+        clearCompletedAt:
+            latestProgress.completedAt == null ||
+            latestProgress.completedAt!.isEmpty,
+        createdAt: latestProgress.createdAt,
+        updatedAt: latestProgress.updatedAt,
+        clientUpdatedAt: latestProgress.clientUpdatedAt,
+        deletedAt: latestProgress.deletedAt,
+        clearDeletedAt:
+            latestProgress.deletedAt == null ||
+            latestProgress.deletedAt!.isEmpty,
+        syncVersion: _maxInt(
+          latestProgress.syncVersion,
+          syncedProgress.syncVersion,
+        ),
+        cloudTracked:
+            latestProgress.cloudTracked || syncedProgress.cloudTracked,
+      );
+    }
+
+    final preferred = _preferSyncedRecord(latestProgress, syncedProgress)
+        ? syncedProgress
+        : latestProgress;
+    return preferred.copyWith(
+      syncVersion: _maxInt(
+        latestProgress.syncVersion,
+        syncedProgress.syncVersion,
+      ),
+      cloudTracked: latestProgress.cloudTracked || syncedProgress.cloudTracked,
     );
   }
 

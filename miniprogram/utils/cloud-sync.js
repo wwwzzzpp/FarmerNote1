@@ -7,6 +7,12 @@ function cloneState(state) {
   return {
     entries: Array.isArray(state.entries) ? state.entries.map((entry) => ({ ...entry })) : [],
     tasks: Array.isArray(state.tasks) ? state.tasks.map((task) => ({ ...task })) : [],
+    cropPlanInstances: Array.isArray(state.cropPlanInstances)
+      ? state.cropPlanInstances.map((plan) => ({ ...plan }))
+      : [],
+    cropPlanActionProgresses: Array.isArray(state.cropPlanActionProgresses)
+      ? state.cropPlanActionProgresses.map((progress) => ({ ...progress }))
+      : [],
     pendingMutations: Array.isArray(state.pendingMutations)
       ? state.pendingMutations.map((mutation) => ({
           ...mutation,
@@ -53,6 +59,22 @@ function buildTasksById(tasks) {
   const map = Object.create(null);
   tasks.forEach((task) => {
     map[task.id] = task;
+  });
+  return map;
+}
+
+function buildPlanInstancesById(planInstances) {
+  const map = Object.create(null);
+  planInstances.forEach((plan) => {
+    map[plan.id] = plan;
+  });
+  return map;
+}
+
+function buildPlanActionProgressesById(progressRecords) {
+  const map = Object.create(null);
+  progressRecords.forEach((progress) => {
+    map[progress.id] = progress;
   });
   return map;
 }
@@ -135,6 +157,66 @@ function mergeTaskRecords(latestTask, syncedTask, hasPendingMutation) {
   };
 }
 
+function mergePlanInstanceRecords(latestPlan, syncedPlan, hasPendingMutation) {
+  if (!syncedPlan) {
+    return { ...latestPlan };
+  }
+
+  if (!latestPlan) {
+    return { ...syncedPlan };
+  }
+
+  if (hasPendingMutation) {
+    return {
+      ...syncedPlan,
+      ...latestPlan,
+      syncVersion: Math.max(Number(latestPlan.syncVersion || 0), Number(syncedPlan.syncVersion || 0)),
+      cloudTracked: !!latestPlan.cloudTracked || !!syncedPlan.cloudTracked,
+    };
+  }
+
+  const preferred = preferSyncedRecord(latestPlan, syncedPlan) ? syncedPlan : latestPlan;
+  return {
+    ...preferred,
+    syncVersion: Math.max(Number(latestPlan.syncVersion || 0), Number(syncedPlan.syncVersion || 0)),
+    cloudTracked: !!latestPlan.cloudTracked || !!syncedPlan.cloudTracked,
+  };
+}
+
+function mergePlanActionProgressRecords(latestProgress, syncedProgress, hasPendingMutation) {
+  if (!syncedProgress) {
+    return { ...latestProgress };
+  }
+
+  if (!latestProgress) {
+    return { ...syncedProgress };
+  }
+
+  if (hasPendingMutation) {
+    return {
+      ...syncedProgress,
+      ...latestProgress,
+      syncVersion: Math.max(
+        Number(latestProgress.syncVersion || 0),
+        Number(syncedProgress.syncVersion || 0)
+      ),
+      cloudTracked: !!latestProgress.cloudTracked || !!syncedProgress.cloudTracked,
+    };
+  }
+
+  const preferred = preferSyncedRecord(latestProgress, syncedProgress)
+    ? syncedProgress
+    : latestProgress;
+  return {
+    ...preferred,
+    syncVersion: Math.max(
+      Number(latestProgress.syncVersion || 0),
+      Number(syncedProgress.syncVersion || 0)
+    ),
+    cloudTracked: !!latestProgress.cloudTracked || !!syncedProgress.cloudTracked,
+  };
+}
+
 function rebaseSyncedState(latestState, syncedState, processedMutationIds) {
   const latest = cloneState(latestState);
   const synced = cloneState(syncedState);
@@ -162,9 +244,31 @@ function rebaseSyncedState(latestState, syncedState, processedMutationIds) {
     );
   });
 
+  const planInstancesById = buildPlanInstancesById(synced.cropPlanInstances || []);
+  (latest.cropPlanInstances || []).forEach((plan) => {
+    const entityKey = getEntityQueueKey('plan_instance', plan.id);
+    planInstancesById[plan.id] = mergePlanInstanceRecords(
+      plan,
+      planInstancesById[plan.id],
+      !!pendingEntityIndex[entityKey]
+    );
+  });
+
+  const progressById = buildPlanActionProgressesById(synced.cropPlanActionProgresses || []);
+  (latest.cropPlanActionProgresses || []).forEach((progress) => {
+    const entityKey = getEntityQueueKey('plan_action_progress', progress.id);
+    progressById[progress.id] = mergePlanActionProgressRecords(
+      progress,
+      progressById[progress.id],
+      !!pendingEntityIndex[entityKey]
+    );
+  });
+
   return {
     entries: Object.keys(entriesById).map((id) => entriesById[id]),
     tasks: Object.keys(tasksById).map((id) => tasksById[id]),
+    cropPlanInstances: Object.keys(planInstancesById).map((id) => planInstancesById[id]),
+    cropPlanActionProgresses: Object.keys(progressById).map((id) => progressById[id]),
     pendingMutations: remainingMutations,
     lastSyncedVersion: Math.max(
       Number(latest.lastSyncedVersion || 0),
@@ -181,6 +285,8 @@ function rebaseSyncedState(latestState, syncedState, processedMutationIds) {
 function buildPushMutations(state) {
   const entriesById = buildEntriesById(state.entries);
   const tasksById = buildTasksById(state.tasks);
+  const planInstancesById = buildPlanInstancesById(state.cropPlanInstances || []);
+  const progressById = buildPlanActionProgressesById(state.cropPlanActionProgresses || []);
 
   return state.pendingMutations.map((mutation) => {
     let payload = mutation.payload || {};
@@ -191,6 +297,17 @@ function buildPushMutations(state) {
 
     if (mutation.entityType === 'task' && tasksById[mutation.entityId]) {
       payload = toCloudTask(tasksById[mutation.entityId]);
+    }
+
+    if (mutation.entityType === 'plan_instance' && planInstancesById[mutation.entityId]) {
+      payload = toCloudPlanInstance(planInstancesById[mutation.entityId]);
+    }
+
+    if (
+      mutation.entityType === 'plan_action_progress' &&
+      progressById[mutation.entityId]
+    ) {
+      payload = toCloudPlanActionProgress(progressById[mutation.entityId]);
     }
 
     return {
@@ -213,6 +330,8 @@ function toCloudEntry(entry) {
     clientUpdatedAt: entry.clientUpdatedAt,
     deletedAt: entry.deletedAt || null,
     sourcePlatform: entry.sourcePlatform || 'mini_program',
+    planInstanceId: entry.planInstanceId || null,
+    planActionId: entry.planActionId || null,
   };
 }
 
@@ -227,6 +346,34 @@ function toCloudTask(task) {
     updatedAt: task.updatedAt,
     clientUpdatedAt: task.clientUpdatedAt,
     deletedAt: task.deletedAt || null,
+  };
+}
+
+function toCloudPlanInstance(plan) {
+  return {
+    id: plan.id,
+    cropCode: plan.cropCode,
+    regionCode: plan.regionCode,
+    anchorDate: plan.anchorDate,
+    status: plan.status,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+    clientUpdatedAt: plan.clientUpdatedAt,
+    deletedAt: plan.deletedAt || null,
+  };
+}
+
+function toCloudPlanActionProgress(progress) {
+  return {
+    id: progress.id,
+    planInstanceId: progress.planInstanceId,
+    actionId: progress.actionId,
+    status: progress.status,
+    completedAt: progress.completedAt || null,
+    createdAt: progress.createdAt,
+    updatedAt: progress.updatedAt,
+    clientUpdatedAt: progress.clientUpdatedAt,
+    deletedAt: progress.deletedAt || null,
   };
 }
 
@@ -257,6 +404,8 @@ function normalizeEntry(entry, existingEntry, mediaCacheIndex) {
     ),
     deletedAt: entry && entry.deletedAt ? String(entry.deletedAt) : null,
     sourcePlatform: String((entry && entry.sourcePlatform) || 'mini_program'),
+    planInstanceId: String((entry && entry.planInstanceId) || ''),
+    planActionId: String((entry && entry.planActionId) || ''),
     syncVersion: Number((entry && entry.syncVersion) || 0),
     cloudTracked: true,
   };
@@ -279,6 +428,50 @@ function normalizeTask(task) {
     ),
     deletedAt: task && task.deletedAt ? String(task.deletedAt) : null,
     syncVersion: Number((task && task.syncVersion) || 0),
+    cloudTracked: true,
+  };
+}
+
+function normalizePlanInstance(plan) {
+  return {
+    id: String((plan && plan.id) || ''),
+    cropCode: String((plan && plan.cropCode) || ''),
+    regionCode: String((plan && plan.regionCode) || ''),
+    anchorDate: String((plan && plan.anchorDate) || ''),
+    status: String((plan && plan.status) || 'active'),
+    createdAt: String((plan && plan.createdAt) || new Date().toISOString()),
+    updatedAt: String((plan && plan.updatedAt) || (plan && plan.createdAt) || new Date().toISOString()),
+    clientUpdatedAt: String(
+      (plan && plan.clientUpdatedAt) ||
+        (plan && plan.updatedAt) ||
+        (plan && plan.createdAt) ||
+        new Date().toISOString()
+    ),
+    deletedAt: plan && plan.deletedAt ? String(plan.deletedAt) : null,
+    syncVersion: Number((plan && plan.syncVersion) || 0),
+    cloudTracked: true,
+  };
+}
+
+function normalizePlanActionProgress(progress) {
+  return {
+    id: String((progress && progress.id) || ''),
+    planInstanceId: String((progress && progress.planInstanceId) || ''),
+    actionId: String((progress && progress.actionId) || ''),
+    status: String((progress && progress.status) || 'pending'),
+    completedAt: progress && progress.completedAt ? String(progress.completedAt) : null,
+    createdAt: String((progress && progress.createdAt) || new Date().toISOString()),
+    updatedAt: String(
+      (progress && progress.updatedAt) || (progress && progress.createdAt) || new Date().toISOString()
+    ),
+    clientUpdatedAt: String(
+      (progress && progress.clientUpdatedAt) ||
+        (progress && progress.updatedAt) ||
+        (progress && progress.createdAt) ||
+        new Date().toISOString()
+    ),
+    deletedAt: progress && progress.deletedAt ? String(progress.deletedAt) : null,
+    syncVersion: Number((progress && progress.syncVersion) || 0),
     cloudTracked: true,
   };
 }
@@ -312,6 +505,8 @@ function mergePulledState(state, payload) {
   const nextState = cloneState(state);
   const entriesById = buildEntriesById(nextState.entries);
   const tasksById = buildTasksById(nextState.tasks);
+  const planInstancesById = buildPlanInstancesById(nextState.cropPlanInstances || []);
+  const progressById = buildPlanActionProgressesById(nextState.cropPlanActionProgresses || []);
 
   (payload.entries || []).forEach((entry) => {
     const normalized = normalizeEntry(entry, entriesById[entry.id], nextState.mediaCacheIndex);
@@ -326,8 +521,20 @@ function mergePulledState(state, payload) {
     tasksById[normalized.id] = normalized;
   });
 
+  (payload.cropPlanInstances || []).forEach((plan) => {
+    const normalized = normalizePlanInstance(plan);
+    planInstancesById[normalized.id] = normalized;
+  });
+
+  (payload.cropPlanActionProgresses || []).forEach((progress) => {
+    const normalized = normalizePlanActionProgress(progress);
+    progressById[normalized.id] = normalized;
+  });
+
   nextState.entries = Object.keys(entriesById).map((id) => entriesById[id]);
   nextState.tasks = Object.keys(tasksById).map((id) => tasksById[id]);
+  nextState.cropPlanInstances = Object.keys(planInstancesById).map((id) => planInstancesById[id]);
+  nextState.cropPlanActionProgresses = Object.keys(progressById).map((id) => progressById[id]);
   nextState.lastSyncedVersion = Number(payload.nextSyncedVersion || nextState.lastSyncedVersion || 0);
 
   return nextState;
@@ -348,12 +555,24 @@ async function hydrateRemotePhotos(state) {
       continue;
     }
 
-    const localPhotoPath = await cloudMedia.ensureDownloadedPhoto(
-      nextState.authSession,
-      entry.photoObjectPath
-    );
-    entry.localPhotoPath = localPhotoPath;
-    nextState.mediaCacheIndex[entry.photoObjectPath] = localPhotoPath;
+    try {
+      const localPhotoPath = await cloudMedia.ensureDownloadedPhoto(
+        nextState.authSession,
+        entry.photoObjectPath
+      );
+      entry.localPhotoPath = localPhotoPath;
+      nextState.mediaCacheIndex[entry.photoObjectPath] = localPhotoPath;
+    } catch (error) {
+      // Remote photo hydration should be best-effort. If a single image cannot
+      // be downloaded, we still keep the pulled entry/task data visible.
+      entry.localPhotoPath = '';
+      console.warn(
+        '[cloud-sync] Failed to hydrate remote photo, keeping record without local image.',
+        entry.id,
+        entry.photoObjectPath,
+        error
+      );
+    }
   }
 
   return nextState;

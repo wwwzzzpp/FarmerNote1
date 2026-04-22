@@ -171,17 +171,17 @@ class TimelineScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      ...group.entries.map(
-                        (entry) => _TimelineCard(
-                          entry: entry,
-                          onOpenTask: entry.task == null
+                          ...group.entries.map(
+                            (entry) => _TimelineCard(
+                              entry: entry,
+                              onOpenTask: entry.task == null
                               ? null
-                              : () => controller.goToTasks(
+                              : () => controller.goToRecord(
                                   focusTaskId: entry.task!.id,
                                 ),
-                          onDelete: () => _confirmDelete(context, entry),
-                        ),
-                      ),
+                              onDelete: () => _confirmDelete(context, entry),
+                            ),
+                          ),
                     ],
                   ),
                 ),
@@ -333,7 +333,7 @@ class _TimelineCard extends StatelessWidget {
                         SizedBox(
                           width: isCompact ? 124 : 132,
                           child: FarmerButton(
-                            label: '打开待办',
+                            label: '去记录页处理',
                             tone: FarmerButtonTone.secondary,
                             small: true,
                             onPressed: onOpenTask,

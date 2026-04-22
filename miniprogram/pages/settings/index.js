@@ -93,15 +93,15 @@ Page({
     });
   },
 
-  goTimeline() {
+  goPlan() {
     wx.redirectTo({
-      url: '/pages/timeline/index',
+      url: '/pages/plan/index',
     });
   },
 
-  goTasks() {
+  goTimeline() {
     wx.redirectTo({
-      url: '/pages/tasks/index',
+      url: '/pages/timeline/index',
     });
   },
 

@@ -7,7 +7,10 @@ import '../config/cloud_config.dart';
 import '../models/auth_session.dart';
 import '../models/account_deletion_status.dart';
 import '../models/calendar_sync_result.dart';
+import '../models/crop_plan_action_progress.dart';
+import '../models/crop_plan_instance.dart';
 import '../models/entry_record.dart';
+import '../models/plan_record_draft.dart';
 import '../models/stored_app_state.dart';
 import '../models/sync_mutation.dart';
 import '../models/task_record.dart';
@@ -16,6 +19,7 @@ import '../models/timeline_entry_record.dart';
 import '../services/app_storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/calendar_service.dart';
+import '../services/crop_plan_service.dart';
 import '../services/media_repository.dart';
 import '../services/sync_queue_store.dart';
 import '../services/sync_service.dart';
@@ -37,6 +41,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     SyncService? syncService,
     SyncQueueStore? syncQueueStore,
     MediaRepository? mediaRepository,
+    CropPlanService? cropPlanService,
     Uuid? uuid,
   }) : _storageService = storageService ?? AppStorageService(),
        _calendarService = calendarService ?? CalendarService(),
@@ -44,6 +49,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
        _syncService = syncService ?? SyncService(),
        _syncQueueStore = syncQueueStore ?? const SyncQueueStore(),
        _mediaRepository = mediaRepository ?? MediaRepository(),
+       _cropPlanService = cropPlanService ?? CropPlanService(),
        _uuid = uuid ?? const Uuid();
 
   final AppStorageService _storageService;
@@ -52,13 +58,18 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   final SyncService _syncService;
   final SyncQueueStore _syncQueueStore;
   final MediaRepository _mediaRepository;
+  final CropPlanService _cropPlanService;
   final Uuid _uuid;
 
   List<EntryRecord> _entries = <EntryRecord>[];
   List<TaskRecord> _tasks = <TaskRecord>[];
+  List<CropPlanInstance> _cropPlanInstances = <CropPlanInstance>[];
+  List<CropPlanActionProgress> _cropPlanActionProgresses =
+      <CropPlanActionProgress>[];
   List<SyncMutation> _pendingMutations = <SyncMutation>[];
   Map<String, String> _mediaCacheIndex = <String, String>{};
   AuthSession? _authSession;
+  PlanRecordDraft? _pendingRecordDraft;
   AccountDeletionStatus _accountDeletionStatus = AccountDeletionStatus.none();
   bool _isReady = false;
   bool _isSyncing = false;
@@ -93,6 +104,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       (isSignedIn || isDevLoginEnabled || canUseWeChatLogin);
   int get selectedTabIndex => _selectedTabIndex;
   String get focusTaskId => _focusTaskId;
+  PlanRecordDraft? get pendingRecordDraft => _pendingRecordDraft;
   int get pendingCloudChangeCount => _pendingMutations.length;
   AuthSession? get authSession => _authSession;
   AccountDeletionStatus get accountDeletionStatus => _accountDeletionStatus;
@@ -204,8 +216,25 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     _sortedTasks(_tasks.where((task) => !task.isDeleted).toList()),
   );
 
+  List<CropPlanInstance> get cropPlanInstances =>
+      List<CropPlanInstance>.unmodifiable(
+        _sortedPlanInstances(
+          _cropPlanInstances.where((plan) => !plan.isDeleted).toList(),
+        ),
+      );
+
+  List<CropPlanActionProgress> get cropPlanActionProgresses =>
+      List<CropPlanActionProgress>.unmodifiable(
+        _sortedPlanActionProgresses(
+          _cropPlanActionProgresses
+              .where((progress) => !progress.isDeleted)
+              .toList(),
+        ),
+      );
+
   Future<void> initialize() async {
     WidgetsBinding.instance.addObserver(this);
+    await _cropPlanService.loadCatalog();
     final stored = await _storageService.loadState();
     await _applyState(
       _sanitizeStoredState(_reconcileState(stored)),
@@ -271,6 +300,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     required String noteText,
     required String dueAt,
     required String photoLocalPath,
+    String planInstanceId = '',
+    String planActionId = '',
   }) async {
     final trimmed = noteText.trim();
     if (trimmed.isEmpty) {
@@ -293,6 +324,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       clientUpdatedAt: nowIso,
       deletedAt: null,
       sourcePlatform: 'flutter_app',
+      planInstanceId: planInstanceId,
+      planActionId: planActionId,
       syncVersion: 0,
       cloudTracked: shouldTrackCloud,
     );
@@ -647,11 +680,19 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     final signedOutTasks = _tasks
         .map((task) => task.copyWith(cloudTracked: false))
         .toList();
+    final signedOutPlanInstances = _cropPlanInstances
+        .map((plan) => plan.copyWith(cloudTracked: false))
+        .toList();
+    final signedOutPlanActionProgresses = _cropPlanActionProgresses
+        .map((progress) => progress.copyWith(cloudTracked: false))
+        .toList();
 
     await _applyState(
       StoredAppState(
         entries: signedOutEntries,
         tasks: signedOutTasks,
+        cropPlanInstances: signedOutPlanInstances,
+        cropPlanActionProgresses: signedOutPlanActionProgresses,
         pendingMutations: const <SyncMutation>[],
         lastSyncedVersion: 0,
         authSession: null,
@@ -868,25 +909,217 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
-  void goToRecord() {
+  void goToRecord({String focusTaskId = ''}) {
     _selectedTabIndex = 0;
+    _focusTaskId = focusTaskId;
     notifyListeners();
+    unawaited(_syncIfPossible(silent: true));
+  }
+
+  void goToPlan() {
+    _selectedTabIndex = 1;
+    _focusTaskId = '';
+    notifyListeners();
+    unawaited(_syncIfPossible(silent: true));
   }
 
   void goToTimeline() {
-    _selectedTabIndex = 1;
+    _selectedTabIndex = 2;
+    _focusTaskId = '';
     notifyListeners();
+    unawaited(_syncIfPossible(silent: true));
   }
 
   void goToTasks({String focusTaskId = ''}) {
-    _selectedTabIndex = 2;
-    _focusTaskId = focusTaskId;
-    notifyListeners();
+    goToRecord(focusTaskId: focusTaskId);
   }
 
   void goToMe() {
     _selectedTabIndex = 3;
+    _focusTaskId = '';
     notifyListeners();
+    unawaited(_syncIfPossible(silent: true));
+  }
+
+  void startRecordDraftFromPlan({
+    required String planInstanceId,
+    required String actionId,
+    required bool withReminder,
+  }) {
+    final planInstance = cropPlanInstances
+        .where((plan) => plan.id == planInstanceId)
+        .firstOrNull;
+    if (planInstance == null) {
+      return;
+    }
+    final cropTemplate = _cropPlanService.getCropTemplate(
+      planInstance.cropCode,
+    );
+    if (cropTemplate == null) {
+      return;
+    }
+    final actionDetail = _cropPlanService.buildActionDetail(
+      cropTemplate: cropTemplate,
+      planInstance: planInstance,
+      progressRecords: cropPlanActionProgresses,
+      entries: entries,
+      actionId: actionId,
+      reference: DateTime.now(),
+    );
+    if (actionDetail == null) {
+      return;
+    }
+    _pendingRecordDraft = withReminder
+        ? actionDetail.reminderDraft
+        : actionDetail.noteDraft;
+    goToRecord();
+  }
+
+  void clearPendingRecordDraft() {
+    if (_pendingRecordDraft == null) {
+      return;
+    }
+    _pendingRecordDraft = null;
+    notifyListeners();
+  }
+
+  Future<CropPlanInstance> setCropPlanAnchor({
+    required String cropCode,
+    required String anchorDate,
+  }) async {
+    final cropTemplate = _cropPlanService.getCropTemplate(cropCode);
+    if (cropTemplate == null) {
+      throw Exception('暂不支持这个作物计划。');
+    }
+    final normalizedAnchorDate = farmer_date.formatDateInput(
+      _cropPlanService.parseAnchorDate(anchorDate),
+    );
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+    final shouldTrackCloud = _authSession != null;
+    final existingPlan = _cropPlanService.getActivePlanInstance(
+      cropPlanInstances,
+      cropCode,
+    );
+
+    final nextPlan = existingPlan != null
+        ? existingPlan.copyWith(
+            anchorDate: normalizedAnchorDate,
+            updatedAt: nowIso,
+            clientUpdatedAt: nowIso,
+            cloudTracked: existingPlan.cloudTracked || shouldTrackCloud,
+          )
+        : CropPlanInstance(
+            id: _uuid.v4(),
+            cropCode: cropTemplate.cropCode,
+            regionCode: _cropPlanService.catalog.regionCode,
+            anchorDate: normalizedAnchorDate,
+            status: CropPlanInstanceStatus.active,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            clientUpdatedAt: nowIso,
+            deletedAt: null,
+            syncVersion: 0,
+            cloudTracked: shouldTrackCloud,
+          );
+
+    var pendingMutations = List<SyncMutation>.from(_pendingMutations);
+    if (nextPlan.cloudTracked) {
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _planInstanceMutation(nextPlan, SyncOperation.upsert),
+      );
+    }
+
+    await _applyState(
+      _currentState.copyWith(
+        cropPlanInstances: existingPlan != null
+            ? _cropPlanInstances
+                  .map((plan) => plan.id == nextPlan.id ? nextPlan : plan)
+                  .toList()
+            : <CropPlanInstance>[nextPlan, ..._cropPlanInstances],
+        pendingMutations: pendingMutations,
+      ),
+    );
+    unawaited(_syncIfPossible(silent: true));
+    return nextPlan;
+  }
+
+  Future<CropPlanActionProgress> toggleCropPlanActionProgress({
+    required String planInstanceId,
+    required String actionId,
+  }) async {
+    final planInstance = cropPlanInstances
+        .where((plan) => plan.id == planInstanceId)
+        .firstOrNull;
+    if (planInstance == null) {
+      throw Exception('当前作物计划不存在。');
+    }
+
+    final existingProgress = cropPlanActionProgresses
+        .where(
+          (progress) =>
+              progress.planInstanceId == planInstanceId &&
+              progress.actionId == actionId,
+        )
+        .firstOrNull;
+    final shouldTrackCloud = _authSession != null;
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+    final nextProgress = existingProgress != null
+        ? existingProgress.copyWith(
+            status: existingProgress.status == CropPlanActionStatus.completed
+                ? CropPlanActionStatus.pending
+                : CropPlanActionStatus.completed,
+            completedAt:
+                existingProgress.status == CropPlanActionStatus.completed
+                ? null
+                : nowIso,
+            updatedAt: nowIso,
+            clientUpdatedAt: nowIso,
+            cloudTracked: existingProgress.cloudTracked || shouldTrackCloud,
+            clearCompletedAt:
+                existingProgress.status == CropPlanActionStatus.completed,
+          )
+        : CropPlanActionProgress(
+            id: _uuid.v4(),
+            planInstanceId: planInstanceId,
+            actionId: actionId,
+            status: CropPlanActionStatus.completed,
+            completedAt: nowIso,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            clientUpdatedAt: nowIso,
+            deletedAt: null,
+            syncVersion: 0,
+            cloudTracked: shouldTrackCloud,
+          );
+
+    var pendingMutations = List<SyncMutation>.from(_pendingMutations);
+    if (nextProgress.cloudTracked) {
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _planActionProgressMutation(nextProgress, SyncOperation.upsert),
+      );
+    }
+
+    await _applyState(
+      _currentState.copyWith(
+        cropPlanActionProgresses: existingProgress != null
+            ? _cropPlanActionProgresses
+                  .map(
+                    (progress) => progress.id == nextProgress.id
+                        ? nextProgress
+                        : progress,
+                  )
+                  .toList()
+            : <CropPlanActionProgress>[
+                nextProgress,
+                ..._cropPlanActionProgresses,
+              ],
+        pendingMutations: pendingMutations,
+      ),
+    );
+    unawaited(_syncIfPossible(silent: true));
+    return nextProgress;
   }
 
   Map<String, int> get stats {
@@ -929,12 +1162,65 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       .where((task) => task.status == TaskStatus.completed)
       .toList();
 
+  List<CropPlanHomeCardView> get planHomeCards =>
+      _cropPlanService.buildHomeCards(
+        planInstances: cropPlanInstances,
+        progressRecords: cropPlanActionProgresses,
+        entries: entries,
+        reference: DateTime.now(),
+      );
+
+  CropPlanDetailView? buildCropPlanDetail(String cropCode) {
+    final cropTemplate = _cropPlanService.getCropTemplate(cropCode);
+    if (cropTemplate == null) {
+      return null;
+    }
+    return _cropPlanService.buildPlanDetail(
+      cropTemplate: cropTemplate,
+      planInstance: _cropPlanService.getActivePlanInstance(
+        cropPlanInstances,
+        cropCode,
+      ),
+      progressRecords: cropPlanActionProgresses,
+      entries: entries,
+      reference: DateTime.now(),
+    );
+  }
+
+  CropPlanActionDetailView? buildCropPlanActionDetail({
+    required String planInstanceId,
+    required String actionId,
+  }) {
+    final planInstance = cropPlanInstances
+        .where((plan) => plan.id == planInstanceId)
+        .firstOrNull;
+    if (planInstance == null) {
+      return null;
+    }
+    final cropTemplate = _cropPlanService.getCropTemplate(
+      planInstance.cropCode,
+    );
+    if (cropTemplate == null) {
+      return null;
+    }
+    return _cropPlanService.buildActionDetail(
+      cropTemplate: cropTemplate,
+      planInstance: planInstance,
+      progressRecords: cropPlanActionProgresses,
+      entries: entries,
+      actionId: actionId,
+      reference: DateTime.now(),
+    );
+  }
+
   Future<void> _applyState(
     StoredAppState state, {
     bool shouldNotify = true,
   }) async {
     _entries = state.entries;
     _tasks = state.tasks;
+    _cropPlanInstances = state.cropPlanInstances;
+    _cropPlanActionProgresses = state.cropPlanActionProgresses;
     _pendingMutations = state.pendingMutations;
     _lastSyncedVersion = state.lastSyncedVersion;
     _authSession = state.authSession;
@@ -1003,9 +1289,39 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
+  SyncMutation _planInstanceMutation(
+    CropPlanInstance plan,
+    SyncOperation operation,
+  ) {
+    return SyncMutation(
+      id: _uuid.v4(),
+      entityType: SyncEntityType.planInstance,
+      operation: operation,
+      entityId: plan.id,
+      payload: plan.toCloudJson(),
+      clientUpdatedAt: plan.clientUpdatedAt,
+    );
+  }
+
+  SyncMutation _planActionProgressMutation(
+    CropPlanActionProgress progress,
+    SyncOperation operation,
+  ) {
+    return SyncMutation(
+      id: _uuid.v4(),
+      entityType: SyncEntityType.planActionProgress,
+      operation: operation,
+      entityId: progress.id,
+      payload: progress.toCloudJson(),
+      clientUpdatedAt: progress.clientUpdatedAt,
+    );
+  }
+
   StoredAppState get _currentState => StoredAppState(
     entries: _entries,
     tasks: _tasks,
+    cropPlanInstances: _cropPlanInstances,
+    cropPlanActionProgresses: _cropPlanActionProgresses,
     pendingMutations: _pendingMutations,
     lastSyncedVersion: _lastSyncedVersion,
     authSession: _authSession,
@@ -1027,6 +1343,20 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       }
       return left.dueAt.compareTo(right.dueAt);
     });
+    return copy;
+  }
+
+  List<CropPlanInstance> _sortedPlanInstances(List<CropPlanInstance> plans) {
+    final copy = List<CropPlanInstance>.from(plans);
+    copy.sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    return copy;
+  }
+
+  List<CropPlanActionProgress> _sortedPlanActionProgresses(
+    List<CropPlanActionProgress> progresses,
+  ) {
+    final copy = List<CropPlanActionProgress>.from(progresses);
+    copy.sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
     return copy;
   }
 

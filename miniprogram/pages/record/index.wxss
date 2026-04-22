@@ -142,3 +142,54 @@
   border-radius: 18rpx;
   font-size: 26rpx;
 }
+
+.task-module-open-button {
+  min-height: 60rpx;
+  border-radius: 16rpx;
+  padding: 0 18rpx;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+.task-card {
+  border: 1px solid transparent;
+}
+
+.task-card--focused {
+  border-color: #b7ad8c;
+  box-shadow: none;
+}
+
+.task-due {
+  font-size: 32rpx;
+}
+
+.task-note {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 34rpx;
+  line-height: 1.7;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+.task-photo-thumb {
+  display: block;
+  width: 220rpx;
+  height: 164rpx;
+  margin-top: 16rpx;
+  border-radius: 18rpx;
+  background: #ddd5c2;
+}
+
+.task-action-grid {
+  margin-top: 18rpx;
+}
+
+.task-action-grid .action-button {
+  flex: 1 1 0;
+  min-height: 60rpx;
+  padding: 0 14rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+}

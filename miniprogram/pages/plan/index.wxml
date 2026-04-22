@@ -1,0 +1,63 @@
+<view class="app-shell">
+  <view class="section-card hero-card hero-strip">
+    <text class="hero-kicker">PLAN</text>
+    <text class="hero-title">按作物生命周期，一步一步把农事做稳。</text>
+    <text class="helper-text">v1 先做河南/黄淮海的小麦、玉米。先设播种日期，再看这一季该做什么。</text>
+  </view>
+
+  <block wx:for="{{planCards}}" wx:key="cropCode">
+    <view class="section-card plan-card">
+      <view class="section-heading">
+        <view class="section-heading-main">
+          <text class="section-title">{{item.cropName}}</text>
+          <text class="helper-text">{{item.regionName}}</text>
+        </view>
+        <text class="status-chip {{item.stageClass}}">{{item.stageLabel}}</text>
+      </view>
+
+      <view class="plan-meta-grid">
+        <view class="plan-meta-cell">
+          <text class="plan-meta-label">播种日期</text>
+          <text class="plan-meta-value">{{item.hasAnchorDate ? item.anchorDate : '尚未设置'}}</text>
+        </view>
+        <view class="plan-meta-cell">
+          <text class="plan-meta-label">当前进度</text>
+          <text class="plan-meta-value">{{item.progressLabel}}</text>
+        </view>
+      </view>
+
+      <view class="plan-focus-card">
+        <text class="plan-focus-label">现在最该关注</text>
+        <text class="plan-focus-title">{{item.nextActionLabel}}</text>
+        <text class="plan-focus-caption">{{item.stageCaption}}</text>
+      </view>
+
+      <view class="picker-grid plan-picker-grid">
+        <view class="picker-field plan-picker-field">
+          <text class="picker-label">{{item.hasAnchorDate ? '调整播种日期' : '先设置播种日期'}}</text>
+          <picker
+            mode="date"
+            value="{{item.hasAnchorDate ? item.anchorDate : todayDate}}"
+            data-crop-code="{{item.cropCode}}"
+            bindchange="handleAnchorDateChange"
+          >
+            <view class="picker-value">{{item.hasAnchorDate ? item.anchorDate : '点这里选择日期'}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="action-row action-row--single">
+        <button class="action-button secondary-button small-button" data-crop-code="{{item.cropCode}}" bindtap="openPlanDetail">
+          {{item.ctaLabel}}
+        </button>
+      </view>
+    </view>
+  </block>
+
+  <view class="nav-bar">
+    <button class="nav-item" bindtap="goRecord">记录</button>
+    <button class="nav-item nav-item--active" bindtap="goPlan">计划</button>
+    <button class="nav-item" bindtap="goTimeline">时间线</button>
+    <button class="nav-item" bindtap="goMe">我</button>
+  </view>
+</view>
