@@ -145,7 +145,9 @@ Page({
       wx.stopPullDownRefresh();
       return;
     }
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
@@ -239,7 +241,11 @@ Page({
 
     if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'record_page' });
+        }
       } catch (_) {
         // Keep local usage available even when cloud sync fails.
       }
@@ -920,7 +926,9 @@ Page({
     const { taskId } = event.currentTarget.dataset;
 
     store.completeTask(taskId);
-    await this.refreshPage();
+    await this.refreshPage({
+      sync: false,
+    });
     wx.showToast({
       title: '已完成',
       icon: 'success',
@@ -939,7 +947,9 @@ Page({
         }
 
         store.deleteTask(taskId);
-        await this.refreshPage();
+        await this.refreshPage({
+          sync: false,
+        });
         wx.showToast({
           title: '已删除',
           icon: 'success',

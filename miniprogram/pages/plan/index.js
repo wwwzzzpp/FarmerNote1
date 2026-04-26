@@ -44,14 +44,21 @@ Page({
       return;
     }
 
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
-  async refreshPage() {
-    if (store.isSignedInToCloud()) {
+  async refreshPage(options) {
+    const settings = options || {};
+    if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'plan_home' });
+        }
       } catch (_) {
         // Keep local plan data visible even when sync fails.
       }
@@ -71,10 +78,9 @@ Page({
 
     try {
       store.setCropPlanAnchor(cropCode, anchorDate);
-      if (store.isSignedInToCloud()) {
-        await store.syncNow();
-      }
-      await this.refreshPage();
+      await this.refreshPage({
+        sync: false,
+      });
       wx.showToast({
         title: '播种日期已更新',
         icon: 'success',

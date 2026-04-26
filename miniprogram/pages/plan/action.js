@@ -41,14 +41,21 @@ Page({
       return;
     }
 
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
-  async refreshPage() {
-    if (store.isSignedInToCloud()) {
+  async refreshPage(options) {
+    const settings = options || {};
+    if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'plan_action' });
+        }
       } catch (_) {
         // Keep local action detail visible even when sync fails.
       }
@@ -62,7 +69,9 @@ Page({
   async toggleCompleted() {
     try {
       store.toggleCropPlanActionProgress(this.data.planInstanceId, this.data.actionId);
-      await this.refreshPage();
+      await this.refreshPage({
+        sync: false,
+      });
       wx.showToast({
         title: '状态已更新',
         icon: 'success',

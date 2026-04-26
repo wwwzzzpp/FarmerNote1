@@ -41,14 +41,21 @@ Page({
       return;
     }
 
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
-  async refreshPage() {
+  async refreshPage(options) {
+    const settings = options || {};
     if (store.isSignedInToCloud()) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'plan_detail' });
+        }
       } catch (_) {
         // Keep local detail visible even when sync fails.
       }

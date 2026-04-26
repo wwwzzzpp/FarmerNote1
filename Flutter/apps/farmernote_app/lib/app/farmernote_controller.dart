@@ -34,6 +34,9 @@ class SaveEntryResult {
 }
 
 class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
+  static const Duration _passiveSyncCooldown = Duration(seconds: 45);
+  static const Duration _backgroundSyncDebounce = Duration(milliseconds: 1200);
+
   FarmerNoteController({
     AppStorageService? storageService,
     CalendarService? calendarService,
@@ -81,6 +84,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   String _focusTaskId = '';
   String _cloudError = '';
   DateTime? _lastSyncedAt;
+  Timer? _scheduledBackgroundSync;
 
   bool get isReady => _isReady;
   bool get isSyncing => _isSyncing;
@@ -199,13 +203,13 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
           : '当前账号已绑定手机号。等移动端微信登录入口重新开放后，再补绑微信即可。';
     }
     if (pendingCloudChangeCount > 0) {
-      return '还有 $pendingCloudChangeCount 条新变更待上传。当前版本只同步新版产生的数据，不会自动迁移旧本地记录。';
+      return '还有 $pendingCloudChangeCount 条新变更待上传。本机记录会先和云端合并，再按差异继续同步。';
     }
     if (_lastSyncedAt != null) {
       final stamp = _lastSyncedAt!.toLocal();
       return '云端和本机已对齐，上次同步时间 ${stamp.year}-${farmer_date.pad(stamp.month)}-${farmer_date.pad(stamp.day)} ${farmer_date.pad(stamp.hour)}:${farmer_date.pad(stamp.minute)}。';
     }
-    return '新创建的记录会自动加入云同步队列，保持小程序和 Flutter 端同账号互通。';
+    return '本机记录会先和云端合并，后续只同步新增或变更的数据，保持小程序和 Flutter 端同账号互通。';
   }
 
   List<EntryRecord> get entries => List<EntryRecord>.unmodifiable(
@@ -259,6 +263,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _scheduledBackgroundSync?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -293,7 +298,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     await _applyState(reconciled.copyWith(pendingMutations: pendingMutations));
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
   }
 
   Future<SaveEntryResult> createEntry({
@@ -371,7 +376,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       ),
     );
 
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
     return SaveEntryResult(entry: entry, task: task);
   }
 
@@ -449,7 +454,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         pendingMutations: pendingMutations,
       ),
     );
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
   }
 
   Future<void> completeTask(String taskId) async {
@@ -482,7 +487,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         pendingMutations: pendingMutations,
       ),
     );
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
   }
 
   Future<void> deleteTask(String taskId) async {
@@ -517,7 +522,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         pendingMutations: pendingMutations,
       ),
     );
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
   }
 
   Future<void> signInToCloud() async {
@@ -535,7 +540,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
           : await _authService.signInWithWeChat();
       _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
-        _currentState.copyWith(authSession: session),
+        _promoteLocalDataForCloud(_currentState.copyWith(authSession: session)),
         shouldNotify: false,
       );
       _lastSyncedAt = null;
@@ -590,7 +595,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       );
       _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
-        _currentState.copyWith(authSession: session),
+        _promoteLocalDataForCloud(_currentState.copyWith(authSession: session)),
         shouldNotify: false,
       );
       _lastSyncedAt = null;
@@ -622,7 +627,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       );
       _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
-        _currentState.copyWith(authSession: session),
+        _promoteLocalDataForCloud(_currentState.copyWith(authSession: session)),
         shouldNotify: false,
       );
       _lastSyncedAt = null;
@@ -650,7 +655,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       final session = await _authService.linkWeChat(session: _authSession!);
       _accountDeletionStatus = AccountDeletionStatus.none();
       await _applyState(
-        _currentState.copyWith(authSession: session),
+        _promoteLocalDataForCloud(_currentState.copyWith(authSession: session)),
         shouldNotify: false,
       );
       _lastSyncedAt = null;
@@ -670,6 +675,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       throw Exception('当前还有登录或同步进行中，请稍后再试。');
     }
 
+    _scheduledBackgroundSync?.cancel();
+    _scheduledBackgroundSync = null;
     _cloudError = '';
     _lastSyncedAt = null;
     _accountDeletionStatus = AccountDeletionStatus.none();
@@ -798,13 +805,19 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> syncNow() async {
+  Future<void> syncNow({bool force = true}) async {
     if (_isSyncing ||
         _isInitialCloudBootstrapInFlight ||
         _authSession == null) {
       return;
     }
 
+    if (!force && !_shouldSyncState(force: false)) {
+      return;
+    }
+
+    _scheduledBackgroundSync?.cancel();
+    _scheduledBackgroundSync = null;
     _isSyncing = true;
     _cloudError = '';
     notifyListeners();
@@ -827,6 +840,9 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
     } finally {
       _isSyncing = false;
+      if (_pendingMutations.isNotEmpty) {
+        _scheduleBackgroundSync();
+      }
       notifyListeners();
     }
   }
@@ -839,11 +855,11 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (silent) {
-      await _performSilentSync();
+      await _performSilentSync(force: false);
       return;
     }
 
-    await syncNow();
+    await syncNow(force: true);
   }
 
   Future<void> _runInitialCloudBootstrap() async {
@@ -855,7 +871,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     try {
-      await _performSilentSync();
+      await _performSilentSync(force: true);
     } finally {
       _isInitialCloudBootstrapInFlight = false;
       _hasCompletedInitialCloudBootstrap = true;
@@ -863,11 +879,17 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _performSilentSync() async {
+  Future<void> _performSilentSync({required bool force}) async {
     if (_authSession == null || _isSyncing) {
       return;
     }
 
+    if (!force && !_shouldSyncState(force: false)) {
+      return;
+    }
+
+    _scheduledBackgroundSync?.cancel();
+    _scheduledBackgroundSync = null;
     try {
       final result = await _syncService.synchronize(_currentState);
       _lastSyncedAt = DateTime.now().toUtc();
@@ -883,10 +905,136 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
       // Silent sync failures should not interrupt local usage.
+    } finally {
+      if (_pendingMutations.isNotEmpty) {
+        _scheduleBackgroundSync();
+      }
     }
   }
 
+  bool _shouldSyncState({required bool force}) {
+    if (_authSession == null ||
+        _isSyncing ||
+        _isInitialCloudBootstrapInFlight) {
+      return false;
+    }
+
+    if (force) {
+      return true;
+    }
+
+    if (_pendingMutations.isNotEmpty) {
+      return true;
+    }
+
+    if (_lastSyncedVersion <= 0) {
+      return true;
+    }
+
+    if (_lastSyncedAt == null) {
+      return true;
+    }
+
+    return DateTime.now().toUtc().difference(_lastSyncedAt!) >=
+        _passiveSyncCooldown;
+  }
+
+  void _scheduleBackgroundSync() {
+    if (_authSession == null ||
+        _isSyncing ||
+        _isInitialCloudBootstrapInFlight ||
+        _scheduledBackgroundSync != null) {
+      return;
+    }
+
+    _scheduledBackgroundSync = Timer(_backgroundSyncDebounce, () {
+      _scheduledBackgroundSync = null;
+      unawaited(_syncIfPossible(silent: true));
+    });
+  }
+
+  StoredAppState _promoteLocalDataForCloud(StoredAppState state) {
+    if (state.authSession == null) {
+      return state;
+    }
+
+    var changed = false;
+    var pendingMutations = List<SyncMutation>.from(state.pendingMutations);
+
+    final entries = state.entries.map((entry) {
+      if (entry.isDeleted || entry.cloudTracked) {
+        return entry;
+      }
+
+      final nextEntry = entry.copyWith(cloudTracked: true);
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _entryMutation(nextEntry, SyncOperation.upsert),
+      );
+      changed = true;
+      return nextEntry;
+    }).toList();
+
+    final tasks = state.tasks.map((task) {
+      if (task.isDeleted || task.cloudTracked) {
+        return task;
+      }
+
+      final nextTask = task.copyWith(cloudTracked: true);
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _taskMutation(nextTask, SyncOperation.upsert),
+      );
+      changed = true;
+      return nextTask;
+    }).toList();
+
+    final cropPlanInstances = state.cropPlanInstances.map((plan) {
+      if (plan.isDeleted || plan.cloudTracked) {
+        return plan;
+      }
+
+      final nextPlan = plan.copyWith(cloudTracked: true);
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _planInstanceMutation(nextPlan, SyncOperation.upsert),
+      );
+      changed = true;
+      return nextPlan;
+    }).toList();
+
+    final cropPlanActionProgresses = state.cropPlanActionProgresses.map((
+      progress,
+    ) {
+      if (progress.isDeleted || progress.cloudTracked) {
+        return progress;
+      }
+
+      final nextProgress = progress.copyWith(cloudTracked: true);
+      pendingMutations = _syncQueueStore.enqueue(
+        pendingMutations,
+        _planActionProgressMutation(nextProgress, SyncOperation.upsert),
+      );
+      changed = true;
+      return nextProgress;
+    }).toList();
+
+    if (!changed) {
+      return state;
+    }
+
+    return state.copyWith(
+      entries: entries,
+      tasks: tasks,
+      cropPlanInstances: cropPlanInstances,
+      cropPlanActionProgresses: cropPlanActionProgresses,
+      pendingMutations: pendingMutations,
+    );
+  }
+
   Future<void> _resetAfterAccountDeletion(AccountDeletionStatus status) async {
+    _scheduledBackgroundSync?.cancel();
+    _scheduledBackgroundSync = null;
     _lastSyncedAt = null;
     _accountDeletionStatus = status;
     _cloudError = status.message;
@@ -1040,7 +1188,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         pendingMutations: pendingMutations,
       ),
     );
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
     return nextPlan;
   }
 
@@ -1118,7 +1266,7 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
         pendingMutations: pendingMutations,
       ),
     );
-    unawaited(_syncIfPossible(silent: true));
+    _scheduleBackgroundSync();
     return nextProgress;
   }
 
@@ -1398,6 +1546,8 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
       return false;
     }
 
+    _scheduledBackgroundSync?.cancel();
+    _scheduledBackgroundSync = null;
     _lastSyncedAt = null;
     _cloudError = '登录状态已失效，请重新登录云端。';
     await _applyState(

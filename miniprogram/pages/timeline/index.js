@@ -159,7 +159,9 @@ Page({
       wx.stopPullDownRefresh();
       return;
     }
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
@@ -176,7 +178,8 @@ Page({
     };
   },
 
-  async refreshPage() {
+  async refreshPage(options) {
+    const settings = options || {};
     const isSignedIn = store.isSignedInToCloud();
     const localViewState = this.getLocalViewState();
     const shouldShowInitialLoading =
@@ -187,9 +190,13 @@ Page({
       isInitialLoading: shouldShowInitialLoading,
     });
 
-    if (isSignedIn) {
+    if (settings.sync !== false && isSignedIn) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'timeline_page' });
+        }
       } catch (_) {
         // Keep local timeline visible when cloud sync fails.
       }
@@ -225,7 +232,9 @@ Page({
         }
 
         store.deleteEntry(entryId);
-        void this.refreshPage();
+        void this.refreshPage({
+          sync: false,
+        });
         wx.showToast({
           title: '已删除',
           icon: 'success',
