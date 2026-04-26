@@ -917,14 +917,14 @@ class FarmerNoteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void goToPlan() {
-    _selectedTabIndex = 1;
+    _selectedTabIndex = 2;
     _focusTaskId = '';
     notifyListeners();
     unawaited(_syncIfPossible(silent: true));
   }
 
   void goToTimeline() {
-    _selectedTabIndex = 2;
+    _selectedTabIndex = 1;
     _focusTaskId = '';
     notifyListeners();
     unawaited(_syncIfPossible(silent: true));
