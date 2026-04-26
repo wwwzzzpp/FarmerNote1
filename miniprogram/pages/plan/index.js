@@ -1,4 +1,5 @@
 const dateUtils = require('../../utils/date');
+const shareUtils = require('../../utils/share');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 
@@ -24,7 +25,17 @@ Page({
       return;
     }
 
+    shareUtils.enablePageShareMenus();
+
     void this.refreshPage();
+  },
+
+  onShareAppMessage() {
+    return shareUtils.buildShareAppMessage('plan');
+  },
+
+  onShareTimeline() {
+    return shareUtils.buildShareTimeline('plan');
   },
 
   async onPullDownRefresh() {

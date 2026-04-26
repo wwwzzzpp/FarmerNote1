@@ -2,6 +2,7 @@ const calendarUtils = require('../../utils/calendar');
 const dateUtils = require('../../utils/date');
 const mediaUtils = require('../../utils/media');
 const reminderIntent = require('../../utils/reminder-intent');
+const shareUtils = require('../../utils/share');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 const taskModuleUtils = require('../../utils/task-module');
@@ -127,7 +128,16 @@ Page({
     if (!startupConsent.ensureAcceptedOrLaunch()) {
       return;
     }
+    shareUtils.enablePageShareMenus();
     void this.refreshPage();
+  },
+
+  onShareAppMessage() {
+    return shareUtils.buildShareAppMessage('record');
+  },
+
+  onShareTimeline() {
+    return shareUtils.buildShareTimeline('record');
   },
 
   async onPullDownRefresh() {

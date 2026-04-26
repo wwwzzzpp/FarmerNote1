@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "时间线",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }

@@ -1,5 +1,6 @@
 const mediaUtils = require('../../utils/media');
 const dateUtils = require('../../utils/date');
+const shareUtils = require('../../utils/share');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 
@@ -141,7 +142,16 @@ Page({
     if (!startupConsent.ensureAcceptedOrLaunch()) {
       return;
     }
+    shareUtils.enablePageShareMenus();
     void this.refreshPage();
+  },
+
+  onShareAppMessage() {
+    return shareUtils.buildShareAppMessage('timeline');
+  },
+
+  onShareTimeline() {
+    return shareUtils.buildShareTimeline('timeline');
   },
 
   async onPullDownRefresh() {

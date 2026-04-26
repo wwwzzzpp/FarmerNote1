@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "作物计划",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }
