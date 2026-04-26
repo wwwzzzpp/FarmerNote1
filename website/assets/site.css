@@ -614,6 +614,9 @@ img {
   display: grid;
   gap: 18px;
   margin-bottom: 22px;
+  width: min(100%, 920px);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .download-page__intro h1 {
@@ -632,13 +635,10 @@ img {
 }
 
 .download-sheet {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 22px;
-  align-items: start;
+  width: min(100%, 920px);
+  margin: 0 auto;
 }
 
-.download-sheet__qr,
 .download-sheet__main {
   padding: 28px;
   border-radius: var(--radius-xl);
@@ -647,43 +647,30 @@ img {
   box-shadow: var(--shadow);
 }
 
-.download-sheet__qr {
-  text-align: center;
-}
-
-.download-sheet__qr p {
-  margin: 14px 0 0;
-  color: var(--muted);
-  line-height: 1.75;
-}
-
 .download-sheet__main h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.08;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: -0.03em;
 }
 
 .download-sheet__main p {
+  margin: 16px 0 0;
   color: var(--muted);
   line-height: 1.8;
-}
-
-.download-page__pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
 }
 
 .download-page__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .download-page__meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
   margin-top: 24px;
 }
@@ -743,8 +730,7 @@ img {
   .hero__inner,
   .compliance-grid,
   .site-footer__inner,
-  .cta-strip,
-  .download-sheet {
+  .cta-strip {
     grid-template-columns: 1fr;
   }
 
@@ -783,6 +769,14 @@ img {
 
   .download-page__meta {
     grid-template-columns: 1fr;
+  }
+
+  .download-page {
+    padding: 28px 0 56px;
+  }
+
+  .download-sheet__main {
+    padding: 22px;
   }
 
   .cta-strip {

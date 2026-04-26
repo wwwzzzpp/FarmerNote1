@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6.260426';
 const DELETION_WINDOW_DAYS = 15;
 
 const WEBSITE_BASE_URL = 'https://web-t.chuya.wang/';
