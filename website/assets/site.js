@@ -11,8 +11,8 @@ window.FARMERNOTE_SITE = {
   androidApkSha256: 'f964d36ec9ac28612cc4763d66d63a0aab7094bc57e5c218b77f49e21a0faf4b',
   supportText: '待补充公开联系方式',
   supportHint: '正式上架前，请把这里替换成公开邮箱、客服电话或客服微信。',
-  supportEmail: '待补充公开邮箱',
-  supportPhone: '待补充公开电话',
+  supportEmail: 'wwwzzzpp@126.com',
+  supportPhone: ' ',
   deletionWindowDays: 15,
 };
 
