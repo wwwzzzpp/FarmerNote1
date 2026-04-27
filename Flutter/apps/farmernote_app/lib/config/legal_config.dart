@@ -8,6 +8,6 @@ class LegalConfig {
   static const String accountDeletionUrl =
       '${websiteBaseUrl}account-deletion.html';
 
-  static const String supportContact = '待补充公开联系方式';
+  static const String supportContact = '联系方式：wwwzzzpp@126.com';
   static const String supportHint = '正式上架前，请替换成公开邮箱、电话或客服微信。';
 }

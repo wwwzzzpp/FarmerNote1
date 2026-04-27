@@ -10,80 +10,9 @@ import '../legal/legal_documents.dart';
 import 'account_deletion_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({required this.controller, super.key});
-
   final FarmerNoteController controller;
 
-  String _accountTitle() {
-    final profile = controller.authSession?.userProfile;
-    if (profile == null) {
-      return '当前未登录云端';
-    }
-    final displayName = profile.displayName.trim();
-    if (displayName.isNotEmpty) {
-      return displayName;
-    }
-    if (profile.maskedPhone.trim().isNotEmpty) {
-      return profile.maskedPhone;
-    }
-    return '云端账号';
-  }
-
-  String _accountDetail() {
-    if (!controller.isSignedIn) {
-      return '未登录时，设置页仍可查看协议与官网地址。';
-    }
-    if (controller.hasLinkedPhone && controller.hasLinkedWeChat) {
-      return '当前账号已绑定手机号和微信。';
-    }
-    if (controller.hasLinkedPhone) {
-      return '当前账号已绑定手机号，后续还可补绑微信。';
-    }
-    if (controller.hasLinkedWeChat) {
-      return '当前账号已绑定微信，后续还可补绑手机号。';
-    }
-    return '当前账号还没有完成登录方式绑定。';
-  }
-
-  Future<void> _confirmSignOut(BuildContext context) async {
-    final confirmed =
-        await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('退出登录'),
-            content: const Text('退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('退出登录'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-
-    if (!confirmed || !context.mounted) {
-      return;
-    }
-
-    try {
-      await controller.signOut();
-      if (context.mounted) {
-        showAppSnackBar(context, '已退出登录');
-      }
-    } catch (error) {
-      if (context.mounted) {
-        showAppSnackBar(
-          context,
-          error.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    }
-  }
+  const SettingsScreen({required this.controller, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +118,7 @@ class SettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const Text(
-                    '官网与公开链接',
+                    '官方网站',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
@@ -230,14 +159,6 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    LegalConfig.supportHint,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.7,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -280,18 +201,89 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _accountDetail() {
+    if (!controller.isSignedIn) {
+      return '未登录时，设置页仍可查看协议与官网地址。';
+    }
+    if (controller.hasLinkedPhone && controller.hasLinkedWeChat) {
+      return '当前账号已绑定手机号和微信。';
+    }
+    if (controller.hasLinkedPhone) {
+      return '当前账号已绑定手机号，后续还可补绑微信。';
+    }
+    if (controller.hasLinkedWeChat) {
+      return '当前账号已绑定微信，后续还可补绑手机号。';
+    }
+    return '当前账号还没有完成登录方式绑定。';
+  }
+
+  String _accountTitle() {
+    final profile = controller.authSession?.userProfile;
+    if (profile == null) {
+      return '当前未登录云端';
+    }
+    final displayName = profile.displayName.trim();
+    if (displayName.isNotEmpty) {
+      return displayName;
+    }
+    if (profile.maskedPhone.trim().isNotEmpty) {
+      return profile.maskedPhone;
+    }
+    return '云端账号';
+  }
+
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('退出登录'),
+            content: const Text('退出后会清掉当前登录态与待同步队列，现有记录仍保留在本机，继续以本地模式使用。'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('退出登录'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed || !context.mounted) {
+      return;
+    }
+
+    try {
+      await controller.signOut();
+      if (context.mounted) {
+        showAppSnackBar(context, '已退出登录');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+  }
 }
 
 class _SettingsTile extends StatelessWidget {
+  final String title;
+
+  final String subtitle;
+  final VoidCallback onTap;
   const _SettingsTile({
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {

@@ -30,15 +30,15 @@
   </view>
 
   <view class="section-card">
-    <text class="section-title">官网与公开链接</text>
+    <text class="section-title">官方网站</text>
     <text class="helper-text">{{websiteBaseUrl}}</text>
     <view class="action-row action-row--single">
       <button class="action-button secondary-button small-button" bindtap="copyWebsiteUrl">复制官网地址</button>
     </view>
 
-    <text class="section-title settings-section-title">联系方式</text>
+    <text class="section-title settings-section-title">联系方式：wwwzzzpp@126.com</text>
     <text class="settings-support-contact">{{supportContact}}</text>
-    <text class="helper-text">{{supportHint}}</text>
+    
   </view>
 
   <view class="section-card settings-version-card">

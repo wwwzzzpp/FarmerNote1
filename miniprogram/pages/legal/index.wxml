@@ -1,6 +1,6 @@
 <view class="app-shell">
   <view class="section-card hero-card legal-hero-card">
-    <text class="hero-kicker">公开页面与小程序文案保持同源更新</text>
+   
     <text class="hero-title legal-hero-title">{{document.title}}</text>
     <text class="hero-body legal-hero-body">{{document.summary}}</text>
   </view>
@@ -34,8 +34,8 @@
   </block>
 
   <view class="section-card">
-    <text class="section-title">联系方式</text>
+    <text class="section-title">联系方式：wwwzzzpp@126.com</text>
     <text class="legal-support-contact">{{supportContact}}</text>
-    <text class="helper-text">{{supportHint}}</text>
+    
   </view>
 </view>
