@@ -8,8 +8,8 @@
       name="description"
       content="初芽巡田 FarmerNote 是一款面向农事记录的轻量工具，支持巡田记录、待办提醒、时间线回看与多端云同步。"
     />
-    <link rel="stylesheet" href="assets/site.css" />
-    <script defer src="assets/site.js"></script>
+    <link rel="stylesheet" href="assets/site.css?v=20260422-2353" />
+    <script defer src="assets/site.js?v=20260422-2353"></script>
   </head>
   <body>
     <div class="page-shell">
@@ -108,10 +108,23 @@
             <div class="tabs-content">
               <div class="tab-pane active" id="tab-android">
                 <div class="qr-wrapper">
-                  <div class="qr-placeholder" style="margin: 0 auto;">
-                    Android 二维码占位图
+                  <a class="qr-image-link" href="download/android/" aria-label="打开 Android 下载页">
+                    <img
+                      class="qr-image"
+                      src="assets/android-download-qrcode.png"
+                      alt="Android 下载页二维码"
+                    />
+                  </a>
+                  <p>扫码打开 Android 下载页</p>
+                  <p class="qr-caption">
+                    扫码后可查看正式版下载说明，并直接下载 Android 安装包。
+                  </p>
+                  <div class="download-actions">
+                    <a class="button" href="download/android/">打开下载页</a>
+                    <button class="ghost-button copy-button" type="button" data-copy-value="androidDownloadPageUrl">
+                      复制下载页链接
+                    </button>
                   </div>
-                  <p>扫码下载 Android 安装包</p>
                 </div>
               </div>
               <div class="tab-pane" id="tab-mini">

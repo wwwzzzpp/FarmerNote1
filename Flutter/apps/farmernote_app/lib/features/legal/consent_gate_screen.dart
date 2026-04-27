@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../config/legal_config.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/farmer_ui.dart';
 import 'legal_document_screen.dart';
@@ -115,14 +114,6 @@ class ConsentGateScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          LegalConfig.supportHint,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.6,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
                       ],
                     ),
                   ),

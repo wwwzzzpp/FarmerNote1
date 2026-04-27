@@ -2,6 +2,7 @@ const calendarUtils = require('../../utils/calendar');
 const dateUtils = require('../../utils/date');
 const mediaUtils = require('../../utils/media');
 const reminderIntent = require('../../utils/reminder-intent');
+const shareUtils = require('../../utils/share');
 const startupConsent = require('../../utils/startup-consent');
 const store = require('../../utils/store');
 const taskModuleUtils = require('../../utils/task-module');
@@ -127,7 +128,16 @@ Page({
     if (!startupConsent.ensureAcceptedOrLaunch()) {
       return;
     }
+    shareUtils.enablePageShareMenus();
     void this.refreshPage();
+  },
+
+  onShareAppMessage() {
+    return shareUtils.buildShareAppMessage('record');
+  },
+
+  onShareTimeline() {
+    return shareUtils.buildShareTimeline('record');
   },
 
   async onPullDownRefresh() {
@@ -135,7 +145,9 @@ Page({
       wx.stopPullDownRefresh();
       return;
     }
-    await this.refreshPage();
+    await this.refreshPage({
+      forceSync: true,
+    });
     wx.stopPullDownRefresh();
   },
 
@@ -229,7 +241,11 @@ Page({
 
     if (settings.sync !== false && store.isSignedInToCloud()) {
       try {
-        await store.syncNow();
+        if (settings.forceSync) {
+          await store.syncNow();
+        } else {
+          await store.syncIfNeeded({ reason: 'record_page' });
+        }
       } catch (_) {
         // Keep local usage available even when cloud sync fails.
       }
@@ -910,7 +926,9 @@ Page({
     const { taskId } = event.currentTarget.dataset;
 
     store.completeTask(taskId);
-    await this.refreshPage();
+    await this.refreshPage({
+      sync: false,
+    });
     wx.showToast({
       title: '已完成',
       icon: 'success',
@@ -929,7 +947,9 @@ Page({
         }
 
         store.deleteTask(taskId);
-        await this.refreshPage();
+        await this.refreshPage({
+          sync: false,
+        });
         wx.showToast({
           title: '已删除',
           icon: 'success',

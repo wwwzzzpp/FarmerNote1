@@ -126,7 +126,8 @@ img {
 }
 
 .button,
-.ghost-button {
+.ghost-button,
+.copy-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -146,16 +147,24 @@ img {
   box-shadow: 0 18px 30px rgba(79, 86, 57, 0.22);
 }
 
-.ghost-button {
+.ghost-button,
+.copy-button {
   color: var(--accent-deep);
   background: rgba(255, 255, 255, 0.5);
 }
 
 .button:hover,
 .ghost-button:hover,
+.copy-button:hover,
 .button:focus-visible,
-.ghost-button:focus-visible {
+.ghost-button:focus-visible,
+.copy-button:focus-visible {
   transform: translateY(-1px);
+}
+
+.copy-button {
+  font: inherit;
+  cursor: pointer;
 }
 
 .hero {
@@ -597,6 +606,126 @@ img {
   text-underline-offset: 3px;
 }
 
+.download-page {
+  padding: 40px 0 72px;
+}
+
+.download-page__intro {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 22px;
+  width: min(100%, 920px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.download-page__intro h1 {
+  margin: 0;
+  font-size: clamp(34px, 4.8vw, 54px);
+  line-height: 1.04;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: -0.03em;
+}
+
+.download-page__intro p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.download-sheet {
+  width: min(100%, 920px);
+  margin: 0 auto;
+}
+
+.download-sheet__main {
+  padding: 28px;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  border: 1px solid rgba(185, 173, 140, 0.72);
+  box-shadow: var(--shadow);
+}
+
+.download-sheet__main h2 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.08;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: -0.03em;
+}
+
+.download-sheet__main p {
+  margin: 16px 0 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.download-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.download-page__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.download-meta-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(200, 189, 156, 0.82);
+}
+
+.download-meta-card__label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.download-meta-card__value {
+  display: block;
+  color: var(--accent-deep);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.download-page__tips {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.download-page__tips .note {
+  margin: 0;
+}
+
+.download-page__linkbox {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px dashed rgba(188, 174, 134, 0.82);
+}
+
+.download-page__linkbox code {
+  display: block;
+  margin-top: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: break-all;
+  color: var(--accent-deep);
+}
+
 @media (max-width: 980px) {
   .hero__inner,
   .compliance-grid,
@@ -636,6 +765,18 @@ img {
   .grid--four,
   .grid--three {
     grid-template-columns: 1fr;
+  }
+
+  .download-page__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .download-page {
+    padding: 28px 0 56px;
+  }
+
+  .download-sheet__main {
+    padding: 22px;
   }
 
   .cta-strip {
@@ -718,6 +859,46 @@ img {
   margin: 0;
   color: var(--accent-deep);
   font-weight: 500;
+}
+
+.qr-image-link {
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(188, 174, 134, 0.5);
+  box-shadow: 0 18px 30px rgba(83, 68, 45, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.qr-image-link:hover,
+.qr-image-link:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 24px 36px rgba(83, 68, 45, 0.12);
+}
+
+.qr-image {
+  width: 208px;
+  height: 208px;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.qr-caption {
+  max-width: 320px;
+  margin-top: 12px !important;
+  color: var(--muted) !important;
+  line-height: 1.75;
+  font-size: 14px;
+  font-weight: 400 !important;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .empty-state {

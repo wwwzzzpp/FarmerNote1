@@ -73,8 +73,8 @@ class FarmerNoteScaffold extends StatelessWidget {
         index: controller.selectedTabIndex,
         children: <Widget>[
           RecordScreen(controller: controller),
-          PlanScreen(controller: controller),
           TimelineScreen(controller: controller),
+          PlanScreen(controller: controller),
           SettingsScreen(controller: controller),
         ],
       ),
@@ -86,10 +86,10 @@ class FarmerNoteScaffold extends StatelessWidget {
               controller.goToRecord();
               break;
             case 1:
-              controller.goToPlan();
+              controller.goToTimeline();
               break;
             case 2:
-              controller.goToTimeline();
+              controller.goToPlan();
               break;
             case 3:
               controller.goToMe();

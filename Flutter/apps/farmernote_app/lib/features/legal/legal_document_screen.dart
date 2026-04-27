@@ -7,9 +7,9 @@ import '../../widgets/farmer_ui.dart';
 import 'legal_documents.dart';
 
 class LegalDocumentScreen extends StatelessWidget {
-  const LegalDocumentScreen({required this.type, super.key});
-
   final LegalDocumentType type;
+
+  const LegalDocumentScreen({required this.type, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +33,6 @@ class LegalDocumentScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      '公开页面与 App 内文案保持同源更新',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1.4,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
                     const SizedBox(height: 12),
                     Text(
                       document.title,
@@ -184,14 +175,6 @@ class LegalDocumentScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 8),
-                    Text(
-                      LegalConfig.supportHint,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.7,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
                   ],
                 ),
               ),

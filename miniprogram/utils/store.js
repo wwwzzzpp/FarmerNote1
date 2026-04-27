@@ -10,6 +10,11 @@ let syncInFlight = null;
 let signInInFlight = null;
 let lastSyncError = '';
 let lastSyncAt = '';
+let backgroundSyncTimer = null;
+let lastSuccessfulSyncAtMs = 0;
+
+const PASSIVE_SYNC_COOLDOWN_MS = 45 * 1000;
+const BACKGROUND_SYNC_DEBOUNCE_MS = 1200;
 
 function pad(value) {
   return value < 10 ? `0${value}` : `${value}`;
@@ -803,6 +808,123 @@ function buildPlanActionProgressMutation(progress, operation) {
   };
 }
 
+function promoteLocalStateForCloud(state) {
+  if (!state || !state.authSession || !cloudConfig.isConfigured()) {
+    return state;
+  }
+
+  let changed = false;
+  let pendingMutations = sanitizeMutations(state.pendingMutations);
+
+  const entries = sanitizeEntries(state.entries).map((entry) => {
+    if (entry.deletedAt || entry.cloudTracked) {
+      return entry;
+    }
+
+    const nextEntry = {
+      ...entry,
+      cloudTracked: true,
+    };
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildEntryMutation(nextEntry, 'upsert')
+    );
+    changed = true;
+    return nextEntry;
+  });
+
+  const tasks = sanitizeTasks(state.tasks).map((task) => {
+    if (task.deletedAt || task.cloudTracked) {
+      return task;
+    }
+
+    const nextTask = {
+      ...task,
+      cloudTracked: true,
+    };
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildTaskMutation(nextTask, 'upsert')
+    );
+    changed = true;
+    return nextTask;
+  });
+
+  const cropPlanInstances = sanitizeCropPlanInstances(state.cropPlanInstances).map((plan) => {
+    if (plan.deletedAt || plan.cloudTracked) {
+      return plan;
+    }
+
+    const nextPlan = {
+      ...plan,
+      cloudTracked: true,
+    };
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildPlanInstanceMutation(nextPlan, 'upsert')
+    );
+    changed = true;
+    return nextPlan;
+  });
+
+  const cropPlanActionProgresses = sanitizeCropPlanActionProgresses(
+    state.cropPlanActionProgresses
+  ).map((progress) => {
+    if (progress.deletedAt || progress.cloudTracked) {
+      return progress;
+    }
+
+    const nextProgress = {
+      ...progress,
+      cloudTracked: true,
+    };
+    pendingMutations = enqueueMutation(
+      pendingMutations,
+      buildPlanActionProgressMutation(nextProgress, 'upsert')
+    );
+    changed = true;
+    return nextProgress;
+  });
+
+  if (!changed) {
+    return state;
+  }
+
+  return {
+    ...state,
+    entries,
+    tasks,
+    cropPlanInstances,
+    cropPlanActionProgresses,
+    pendingMutations,
+  };
+}
+
+function shouldSyncState(state, options) {
+  const settings = options || {};
+  if (!cloudConfig.isConfigured() || !state || !state.authSession) {
+    return false;
+  }
+
+  if (settings.force) {
+    return true;
+  }
+
+  if ((state.pendingMutations || []).length > 0) {
+    return true;
+  }
+
+  if (Number(state.lastSyncedVersion || 0) <= 0) {
+    return true;
+  }
+
+  if (!lastSuccessfulSyncAtMs) {
+    return true;
+  }
+
+  return Date.now() - lastSuccessfulSyncAtMs >= PASSIVE_SYNC_COOLDOWN_MS;
+}
+
 function triggerBackgroundSync() {
   if (!cloudConfig.isConfigured()) {
     return;
@@ -813,7 +935,14 @@ function triggerBackgroundSync() {
     return;
   }
 
-  void syncNow().catch(() => {});
+  if (backgroundSyncTimer) {
+    return;
+  }
+
+  backgroundSyncTimer = setTimeout(() => {
+    backgroundSyncTimer = null;
+    void syncIfNeeded({ reason: 'background_mutation' }).catch(() => {});
+  }, BACKGROUND_SYNC_DEBOUNCE_MS);
 }
 
 function createEntry(input) {
@@ -1119,11 +1248,11 @@ function getCloudStatus() {
       ? '当前账号已绑定手机号，但还没绑定微信。补上微信后，小程序和 Flutter 都能直接用微信进到同一个账号。'
       : '当前账号已绑定手机号。等小程序微信登录入口重新开放后，再补绑微信即可。';
   } else if (isSignedIn && state.pendingMutations.length > 0) {
-    detail = `还有 ${state.pendingMutations.length} 条新变更待上传。当前版本只同步登录后产生的新数据，不会自动迁移旧本地记录。`;
+    detail = `还有 ${state.pendingMutations.length} 条新变更待上传。本机记录会先和云端合并，再按差异继续同步。`;
   } else if (isSignedIn && lastSyncAt) {
     detail = `云端和本机已对齐，上次同步时间 ${lastSyncAt}。`;
   } else if (isSignedIn) {
-    detail = '新创建的记录会自动同步到云端，并提供给同账号的小程序和 Flutter 端共享。';
+    detail = '本机记录会先和云端合并，后续只同步新增或变更的数据，保持小程序和 Flutter 端同账号互通。';
   } else if (!canUseWeChatLogin()) {
     detail = '未登录时，记录、图片、时间线和待办都会只保存在这台手机里。当前先用手机号验证码登录，后续再开放微信入口。';
   }
@@ -1171,13 +1300,14 @@ async function signInToCloud() {
     const session = cloudConfig.isDevLoginEnabled()
       ? await cloudAuth.loginForDevelopment()
       : await cloudAuth.loginWithWeChat();
-    const state = loadState();
-    persistState({
-      ...state,
+    const nextState = promoteLocalStateForCloud({
+      ...loadState(),
       authSession: session,
     });
+    persistState(nextState);
+    lastSuccessfulSyncAtMs = 0;
     lastSyncError = '';
-    await syncNow();
+    await syncNow({ force: true });
     return session;
   })();
 
@@ -1199,13 +1329,14 @@ async function signInToCloudWithPhone(phone, code) {
 
   signInInFlight = (async () => {
     const session = await cloudAuth.loginWithPhone(phone, code);
-    const state = loadState();
-    persistState({
-      ...state,
+    const nextState = promoteLocalStateForCloud({
+      ...loadState(),
       authSession: session,
     });
+    persistState(nextState);
+    lastSuccessfulSyncAtMs = 0;
     lastSyncError = '';
-    await syncNow();
+    await syncNow({ force: true });
     return session;
   })();
 
@@ -1228,13 +1359,14 @@ async function linkPhoneToCloud(phone, code) {
 
   signInInFlight = (async () => {
     const session = await cloudAuth.linkPhone(state.authSession, phone, code);
-    const nextState = {
+    const nextState = promoteLocalStateForCloud({
       ...state,
       authSession: session,
-    };
+    });
     persistState(nextState);
+    lastSuccessfulSyncAtMs = 0;
     lastSyncError = '';
-    await syncNow();
+    await syncNow({ force: true });
     return session;
   })();
 
@@ -1257,13 +1389,14 @@ async function linkWeChatToCloud() {
 
   signInInFlight = (async () => {
     const session = await cloudAuth.linkWithWeChat(state.authSession);
-    const nextState = {
+    const nextState = promoteLocalStateForCloud({
       ...state,
       authSession: session,
-    };
+    });
     persistState(nextState);
+    lastSuccessfulSyncAtMs = 0;
     lastSyncError = '';
-    await syncNow();
+    await syncNow({ force: true });
     return session;
   })();
 
@@ -1274,14 +1407,15 @@ async function linkWeChatToCloud() {
   }
 }
 
-async function syncNow() {
+async function syncNow(options) {
   if (syncInFlight) {
     return syncInFlight;
   }
 
   syncInFlight = (async () => {
+    const syncOptions = options === undefined ? { force: true } : options || {};
     const stateSnapshot = loadState();
-    if (!cloudConfig.isConfigured() || !stateSnapshot.authSession) {
+    if (!shouldSyncState(stateSnapshot, syncOptions)) {
       return stateSnapshot;
     }
 
@@ -1296,6 +1430,7 @@ async function syncNow() {
       persistState(rebasedState);
       lastSyncError = '';
       const now = new Date();
+      lastSuccessfulSyncAtMs = now.getTime();
       lastSyncAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(
         now.getHours()
       )}:${pad(now.getMinutes())}`;
@@ -1310,6 +1445,7 @@ async function syncNow() {
         persistState(nextState);
         lastSyncError = '登录状态已失效，请重新登录云端。';
         lastSyncAt = '';
+        lastSuccessfulSyncAtMs = 0;
         return nextState;
       }
 
@@ -1323,7 +1459,18 @@ async function syncNow() {
     return await syncInFlight;
   } finally {
     syncInFlight = null;
+    const latestState = loadState();
+    if (latestState.authSession && latestState.pendingMutations.length > 0) {
+      triggerBackgroundSync();
+    }
   }
+}
+
+async function syncIfNeeded(options) {
+  return syncNow({
+    ...(options || {}),
+    force: false,
+  });
 }
 
 function signOutFromCloud() {
@@ -1331,10 +1478,16 @@ function signOutFromCloud() {
     throw new Error('当前还有登录或同步进行中，请稍后再试。');
   }
 
+  if (backgroundSyncTimer) {
+    clearTimeout(backgroundSyncTimer);
+    backgroundSyncTimer = null;
+  }
+
   const state = loadState();
   persistState(detachCloudState(state));
   lastSyncAt = '';
   lastSyncError = '';
+  lastSuccessfulSyncAtMs = 0;
   return getAccountProfileSummary();
 }
 
@@ -1354,10 +1507,15 @@ async function clearAllLocalMedia(state) {
 async function resetAfterAccountDeletion(status) {
   const state = loadState();
   await clearAllLocalMedia(state);
+  if (backgroundSyncTimer) {
+    clearTimeout(backgroundSyncTimer);
+    backgroundSyncTimer = null;
+  }
   persistState(getDefaultState());
   lastSyncAt = '';
   lastSyncError =
     (status && status.message) || '账号已申请注销，将在 15 天内彻底删除。';
+  lastSuccessfulSyncAtMs = 0;
   return getEmptyAccountDeletionStatus();
 }
 
@@ -1431,6 +1589,7 @@ module.exports = {
   signOutFromCloud,
   signInToCloud,
   signInToCloudWithPhone,
+  syncIfNeeded,
   syncNow,
   toggleCropPlanActionProgress,
 };

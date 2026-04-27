@@ -1,0 +1,62 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "初芽巡田图标 Farmer Note 初芽巡田" [ref=e5] [cursor=pointer]:
+        - /url: ../../index.html
+        - img "初芽巡田图标" [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]: Farmer Note
+          - generic [ref=e9]: 初芽巡田
+      - navigation "官网导航" [ref=e10]:
+        - link "立即下载" [ref=e11] [cursor=pointer]:
+          - /url: ../../index.html#download
+        - link "功能亮点" [ref=e12] [cursor=pointer]:
+          - /url: ../../index.html#features
+        - link "使用场景" [ref=e13] [cursor=pointer]:
+          - /url: ../../index.html#scenes
+        - link "关于我们" [ref=e14] [cursor=pointer]:
+          - /url: ../../index.html#about
+        - link "常见问题" [ref=e15] [cursor=pointer]:
+          - /url: ../../index.html#faq
+        - link "隐私政策" [ref=e16] [cursor=pointer]:
+          - /url: ../../privacy.html
+        - link "用户协议" [ref=e17] [cursor=pointer]:
+          - /url: ../../terms.html
+        - link "账号注销" [ref=e18] [cursor=pointer]:
+          - /url: ../../account-deletion.html
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - paragraph [ref=e23]: Android Download
+          - heading "Android 安装包下载" [level=1] [ref=e24]
+        - paragraph [ref=e25]: 这是初芽巡田 FarmerNote 的 Android 正式版下载页。建议使用手机系统浏览器下载安装；如果你是扫码进入本页，也可以直接点下面按钮开始下载。
+      - generic [ref=e27]:
+        - heading "下载初芽巡田 Android 正式版" [level=2] [ref=e28]
+        - paragraph [ref=e29]: 安装完成后，你就可以直接用同一个账号在 Android App、小程序之间同步记录、时间线、待办和作物计划。
+        - generic [ref=e30]:
+          - link "下载 Android 安装包" [ref=e31] [cursor=pointer]:
+            - /url: https://web-t.chuya.wang/download/android/FarmerNote-latest.apk
+          - button "复制下载页链接" [ref=e32] [cursor=pointer]
+        - generic [ref=e34]: 如果系统提示“未知来源应用”或“是否允许本次安装”，请按手机系统提示完成授权。这是 Android 官网直装 APK 的正常流程。
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: 版本说明
+            - generic [ref=e38]: v1.0.6 正式版 Android APK
+          - generic [ref=e39]:
+            - generic [ref=e40]: 安装包大小
+            - generic [ref=e41]: 52.2 MB
+          - generic [ref=e42]:
+            - generic [ref=e43]: 最近更新时间
+            - generic [ref=e44]: 2026-04-22 23:44
+          - generic [ref=e45]:
+            - generic [ref=e46]: Android 包名
+            - generic [ref=e47]: com.farmernote.farmernote_app
+          - generic [ref=e48]:
+            - generic [ref=e49]: SHA256 校验值
+            - generic [ref=e50]: f964d36ec9ac28612cc4763d66d63a0aab7094bc57e5c218b77f49e21a0faf4b
+        - generic [ref=e51]:
+          - text: 下载链接
+          - code [ref=e52]: https://web-t.chuya.wang/download/android/FarmerNote-latest.apk
+  - contentinfo [ref=e53]:
+    - generic [ref=e54]: © 2026 初芽巡田 FarmerNote. 保留所有权利。

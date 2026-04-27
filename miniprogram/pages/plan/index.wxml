@@ -56,8 +56,8 @@
 
   <view class="nav-bar">
     <button class="nav-item" bindtap="goRecord">记录</button>
-    <button class="nav-item nav-item--active" bindtap="goPlan">计划</button>
     <button class="nav-item" bindtap="goTimeline">时间线</button>
+    <button class="nav-item nav-item--active" bindtap="goPlan">计划</button>
     <button class="nav-item" bindtap="goMe">我</button>
   </view>
 </view>

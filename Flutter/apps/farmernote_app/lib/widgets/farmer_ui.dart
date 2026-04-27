@@ -214,7 +214,7 @@ class BottomPillNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = <String>['记录', '计划', '时间线', '我'];
+    const items = <String>['记录', '时间线', '计划', '我'];
     final isCompact = MediaQuery.sizeOf(context).width < 380;
 
     return SafeArea(

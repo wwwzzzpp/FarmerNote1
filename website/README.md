@@ -34,3 +34,34 @@
 4.  自动打扫战场（清理临时产生的压缩包）。
 
 只要你看到终端输出 `🎉 线上门面已更新: https://web-t.chuya.wang/` 的撒花提示，直接去浏览器里强制刷新页面（`Cmd+Shift+R`），你的最新才华就呈现在网上了！
+
+---
+
+## Android 下载页约定
+
+官网 Android 下载页已经固定为：
+
+`https://web-t.chuya.wang/download/android/`
+
+如果要让用户真正下载到最新版 APK，请在发版时同步处理下面两件事：
+
+1. 把正式版安装包放到：
+
+`website/download/android/FarmerNote-latest.apk`
+
+2. 更新 [website/assets/site.js](/Users/wzp/Documents/GitHub/FarmerNote1/website/assets/site.js) 里的这些字段：
+
+- `androidVersion`
+- `androidApkSize`
+- `androidUpdatedAt`
+- `androidApkSha256`（如果你要公开校验值）
+
+只要 APK 文件和这几个文案字段都准备好，再执行一次：
+
+```bash
+./scripts/deploy_website.sh
+```
+
+官网首页里的 Android 二维码和下载页就会一起生效。
+
+如果你修改了 `website/assets/site.css` 或 `website/assets/site.js`，记得同步更新各个 HTML 里引用后的 `?v=...` 版本号，再部署官网。这样浏览器会强制拉取新版静态资源，不容易继续命中旧缓存。
