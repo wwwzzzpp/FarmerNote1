@@ -1,11 +1,11 @@
 name: farmernote_app
 description: "FarmerNote Flutter rewrite with 1:1 mini program parity."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.6
 
 environment:
   sdk: ^3.10.3
-
+::
 fluwx:
   app_id: "wx_your_open_platform_app_id"
   debug_logging: true
